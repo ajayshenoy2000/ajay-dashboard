@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { FileText, Home, Radio, Settings, Sparkles } from "lucide-react";
 
 const items = [
-  { href: "/", label: "Home", icon: Home },
   { href: "/trends", label: "Trends", icon: Sparkles },
   { href: "/briefs", label: "Briefs", icon: FileText },
   { href: "/sources", label: "Sources", icon: Radio },
-  { href: "/settings", label: "Settings", icon: Settings }
+  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/", label: "← Home", icon: Home },
 ];
 
 export function BottomNav() {
@@ -19,7 +19,7 @@ export function BottomNav() {
       <div className="mx-auto grid max-w-xl grid-cols-5 gap-1">
         {items.map((item) => {
           const Icon = item.icon;
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const active = item.href !== "/" && pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
