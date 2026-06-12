@@ -20,8 +20,11 @@ function updateDateTime() {
 }
 
 // ---- Work Schedule (Google Sheet) ----
-const WORK_SCHEDULE_CSV_URL = () =>
-    `https://docs.google.com/spreadsheets/d/${window.AJAY_CONFIG.WORK_SCHEDULE_SHEET_ID}/export?format=csv&gid=0`;
+const MONTH_NAMES = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+const WORK_SCHEDULE_CSV_URL = () => {
+    const month = MONTH_NAMES[new Date().getMonth()];
+    return `https://docs.google.com/spreadsheets/d/${window.AJAY_CONFIG.WORK_SCHEDULE_SHEET_ID}/export?format=csv&sheet=${month}`;
+};
 
 function parseScheduleCSV(text) {
     return text
@@ -70,7 +73,7 @@ async function getWeekWorkStatus() {
                         const dayNum = parseInt((dayNumRow[c] || '').trim(), 10);
                         if (!isNaN(dayNum)) {
                             const val = (r[c] || '').trim();
-                            dayStatusMap[dayNum] = val === '公休' ? 'off' : val ? 'work' : 'unknown';
+                            dayStatusMap[dayNum] = val === '公休' ? 'off' : 'work';
                         }
                     }
                     break;
