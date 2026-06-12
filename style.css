@@ -265,6 +265,95 @@ button:active, a:active {
     gap: 1.25rem;
 }
 
+/* Date Display */
+.date-display {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.25rem 0;
+}
+
+.date-day {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+}
+
+.date-full {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    letter-spacing: -0.01em;
+}
+
+/* Work Widget */
+.work-widget {
+    background: var(--paper);
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.25rem 1rem;
+    box-shadow: var(--shadow-soft);
+}
+
+.work-widget-top {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Week Strip */
+.week-strip {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.3rem;
+}
+
+.week-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.5rem 0.2rem;
+    border-radius: 10px;
+    transition: background 0.2s ease;
+}
+
+.week-day-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+}
+
+.week-day-num {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1;
+}
+
+.week-day-dot {
+    font-size: 0.55rem;
+    line-height: 1;
+}
+
+.week-day--today {
+    background: var(--ink);
+}
+
+.week-day--today .week-day-label,
+.week-day--today .week-day-num {
+    color: #fff;
+}
+
+.week-day--work .week-day-dot { color: var(--orange-deep); }
+.week-day--off .week-day-dot { color: #4caf7d; }
+.week-day--unknown .week-day-dot { color: var(--ink-soft); opacity: 0.4; }
+.week-day--today.week-day--work .week-day-dot { color: var(--orange); }
+.week-day--today.week-day--off .week-day-dot { color: #7effc0; }
+
 /* Today Bar */
 .today-bar {
     display: flex;

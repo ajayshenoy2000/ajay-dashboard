@@ -49,14 +49,14 @@ function parseScheduleCSV(text) {
         });
 }
 
-async function getTodayWorkStatus() {
+async function getWeekWorkStatus() {
     const res = await fetch(WORK_SCHEDULE_CSV_URL(), { cache: 'no-store' });
     if (!res.ok) throw new Error('Network response was not ok');
     const rows = parseScheduleCSV(await res.text());
 
     const today = new Date();
-    const todayDate = today.getDate();
-    let status = '';
+    // Build a map of dayOfMonth → status for this month
+    const dayStatusMap = {};
 
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -68,8 +68,9 @@ async function getTodayWorkStatus() {
                 if ((r[2] || '').trim() === 'アジャイ') {
                     for (let c = 3; c < dayNumRow.length; c++) {
                         const dayNum = parseInt((dayNumRow[c] || '').trim(), 10);
-                        if (dayNum === todayDate) {
-                            status = (r[c] || '').trim();
+                        if (!isNaN(dayNum)) {
+                            const val = (r[c] || '').trim();
+                            dayStatusMap[dayNum] = val === '公休' ? 'off' : val ? 'work' : 'unknown';
                         }
                     }
                     break;
@@ -78,10 +79,31 @@ async function getTodayWorkStatus() {
         }
     }
 
-    return status === '公休' ? 'off' : 'work';
+    // Build this week Mon–Sun
+    const week = [];
+    const dow = today.getDay(); // 0=Sun
+    const monOffset = dow === 0 ? -6 : 1 - dow;
+    for (let d = 0; d < 7; d++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + monOffset + d);
+        const dayNum = date.getDate();
+        const isToday = date.toDateString() === today.toDateString();
+        const status = date.getMonth() === today.getMonth()
+            ? (dayStatusMap[dayNum] || 'unknown')
+            : 'unknown';
+        week.push({ date, dayNum, isToday, status });
+    }
+
+    const todayStatus = dayStatusMap[today.getDate()] || 'unknown';
+    return { todayStatus: todayStatus === '公休' ? 'off' : todayStatus === 'unknown' ? 'unknown' : 'work', week };
 }
 
-function renderWorkPill(state) {
+async function getTodayWorkStatus() {
+    const { todayStatus } = await getWeekWorkStatus();
+    return todayStatus;
+}
+
+function renderWorkPill(state, week) {
     const icon = document.getElementById('workPillIcon');
     const value = document.getElementById('workPillValue');
 
@@ -102,7 +124,34 @@ function renderWorkPill(state) {
         value.classList.add('muted');
     }
 
+    if (week) renderWeekStrip(week);
     if (window.lucide) lucide.createIcons();
+}
+
+function renderWeekStrip(week) {
+    const strip = document.getElementById('weekStrip');
+    if (!strip) return;
+    const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    strip.innerHTML = week.map((day, i) => {
+        const cls = ['week-day',
+            day.isToday ? 'week-day--today' : '',
+            `week-day--${day.status}`
+        ].filter(Boolean).join(' ');
+        const dot = day.status === 'off' ? '✦' : day.status === 'work' ? '●' : '·';
+        return `<div class="${cls}">
+            <span class="week-day-label">${dayLabels[i]}</span>
+            <span class="week-day-num">${day.date.getDate()}</span>
+            <span class="week-day-dot">${dot}</span>
+        </div>`;
+    }).join('');
+}
+
+function updateDateDisplay() {
+    const now = new Date();
+    const dayEl = document.getElementById('dateDay');
+    const fullEl = document.getElementById('dateFull');
+    if (dayEl) dayEl.textContent = now.toLocaleDateString('en-US', { weekday: 'long' });
+    if (fullEl) fullEl.textContent = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 }
 
 // ---- Calendar (Google Calendar) ----
@@ -130,38 +179,21 @@ function renderScheduleList(events) {
 }
 
 function renderCalPill(events) {
-    const value = document.getElementById('calPillValue');
-
-    if (!window.GCal || !window.GCal.isConfigured()) {
-        value.textContent = 'Not connected';
-        value.classList.add('muted');
-        return;
-    }
-
-    if (!window.GCal.isSignedIn()) {
-        value.innerHTML = '<a href="calendar/index.html" style="color: var(--orange-deep); text-decoration: none;">Connect calendar →</a>';
-        value.classList.add('muted');
-        return;
-    }
-
-    value.classList.remove('muted');
-    if (events.length === 0) {
-        value.textContent = 'Nothing scheduled';
-    } else {
-        const eventWord = events.length === 1 ? 'event' : 'events';
-        value.textContent = `${events.length} ${eventWord} today`;
-    }
+    // cal pill removed — no-op kept for hero text compatibility
 }
 
 async function loadTodaySummary() {
     // Work schedule
     let workState = 'unknown';
+    let week = null;
     try {
-        workState = await getTodayWorkStatus();
+        const result = await getWeekWorkStatus();
+        workState = result.todayStatus;
+        week = result.week;
     } catch (e) {
         console.error('Work schedule fetch failed', e);
     }
-    renderWorkPill(workState);
+    renderWorkPill(workState, week);
 
     // Calendar
     let events = [];
@@ -290,19 +322,12 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Settings
-document.getElementById('settingsBtn').addEventListener('click', () => {
-    if (confirm('Settings coming soon! For now, your tasks are saved locally. Clear data?')) {
-        localStorage.removeItem('todos');
-        window.location.reload();
-    }
-});
-
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();
     updateGreeting();
     updateDateTime();
+    updateDateDisplay();
     setInterval(updateDateTime, 1000);
 
     window.todoManager = new TodoManager();
