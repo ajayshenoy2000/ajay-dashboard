@@ -1,5 +1,9 @@
 const SHEET_ID = '1v7eb4olwzKJnem0oJy0N1J3y9SY5_KNqNvFsqKuYV4Q';
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+const MONTH_NAMES = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+const CSV_URL = () => {
+    const month = MONTH_NAMES[new Date().getMonth()];
+    return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${month}`;
+};
 const NAME_MATCH = 'アジャイ';
 const CACHE_KEY = 'workScheduleCache';
 
@@ -188,7 +192,7 @@ function renderToday(dayMap, year, month, todayDate) {
     }
 
     const monthName = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    document.getElementById('monthTitle').textContent = `${monthName} Schedule`;
+    document.getElementById('monthTitle').textContent = monthName;
 }
 
 function setSyncState(state) {
@@ -225,7 +229,7 @@ async function loadSchedule(forceRefresh) {
     refreshBtn.classList.add('spinning');
 
     try {
-        const res = await fetch(CSV_URL, { cache: 'no-store' });
+        const res = await fetch(CSV_URL(), { cache: 'no-store' });
         if (!res.ok) throw new Error('Network response was not ok');
         const text = await res.text();
         const rows = parseCSV(text);
