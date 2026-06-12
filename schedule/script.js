@@ -1,71 +1,59 @@
 const SHEET_ID = '1v7eb4olwzKJnem0oJy0N1J3y9SY5_KNqNvFsqKuYV4Q';
-const MONTH_NAMES = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-const CSV_URL = () => {
-    const month = MONTH_NAMES[new Date().getMonth()];
-    return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${month}`;
-};
 const NAME_MATCH = 'アジャイ';
 const CACHE_KEY = 'workScheduleCache';
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-function parseCSV(text) {
-    return text
-        .replace(/\r\n/g, '\n')
-        .split('\n')
-        .filter(line => line.length > 0)
-        .map(line => {
-            const cells = [];
-            let cur = '';
-            let inQuotes = false;
-            for (let i = 0; i < line.length; i++) {
-                const ch = line[i];
-                if (ch === '"') {
-                    if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
-                    else inQuotes = !inQuotes;
-                } else if (ch === ',' && !inQuotes) {
-                    cells.push(cur);
-                    cur = '';
-                } else {
-                    cur += ch;
-                }
-            }
-            cells.push(cur);
-            return cells;
-        });
+function gvizUrl() {
+    const now = new Date();
+    const sheet = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;
 }
 
-// Extract a map of day-number -> { status, weekday } for Ajay across all
-// "職種/名前" tables found in the sheet.
-function extractDayMap(rows) {
-    const dayMap = {};
+function parseGvizRows(text) {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON object found in gviz response');
+    const json = JSON.parse(match[0]);
+    if (!json.table?.rows) throw new Error('Unexpected gviz table structure');
+    return json.table.rows.map(row =>
+        (row?.c ?? []).map(cell => (cell?.v != null ? String(cell.v).trim() : ''))
+    );
+}
+
+function extractDayMap(rows, targetName) {
+    const raw = {}; // dayNum → shift string
 
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        if ((row[1] || '').trim() === '職種' && (row[2] || '').trim() === '名前') {
-            const dayNumRow = row;
-            const weekdayRow = rows[i + 1] || [];
+        const nameColIdx = row.indexOf('名前');
+        if (nameColIdx === -1 || !row.includes('職種')) continue;
 
-            // Find Ajay's row within this block (search forward until blank/next header)
-            for (let j = i + 1; j < rows.length; j++) {
-                const r = rows[j];
-                if ((r[1] || '').trim() === '職種' && (r[2] || '').trim() === '名前') break;
-                if ((r[2] || '').trim() === NAME_MATCH) {
-                    // Walk day columns starting at index 3
-                    for (let c = 3; c < dayNumRow.length; c++) {
-                        const dayNum = parseInt((dayNumRow[c] || '').trim(), 10);
-                        if (!dayNum || dayNum < 1 || dayNum > 31) continue;
-                        const status = (r[c] || '').trim();
-                        const weekdayJp = (weekdayRow[c] || '').trim();
-                        dayMap[dayNum] = { status, weekdayJp };
-                    }
-                    break;
-                }
+        const dayStartCol = nameColIdx + 1;
+
+        for (let j = i + 1; j < rows.length; j++) {
+            const r = rows[j];
+            if (r.includes('名前') && r.includes('職種')) break;
+            if (!r.includes(targetName)) continue;
+
+            for (let c = dayStartCol; c < row.length; c++) {
+                const d = parseInt(row[c], 10);
+                if (isNaN(d) || d < 1 || d > 31 || d in raw) continue;
+                raw[d] = r[c] || '';
             }
+            break;
         }
     }
 
+    // Wrap in { status } for the calendar renderer
+    const dayMap = {};
+    for (const [d, shift] of Object.entries(raw)) dayMap[d] = { status: shift };
     return dayMap;
+}
+
+async function fetchDayMap() {
+    const res = await fetch(gvizUrl(), { cache: 'no-store' });
+    if (!res.ok) throw new Error(`gviz fetch failed: HTTP ${res.status}`);
+    return extractDayMap(parseGvizRows(await res.text()), NAME_MATCH);
 }
 
 function statusLabel(status) {
@@ -229,12 +217,7 @@ async function loadSchedule(forceRefresh) {
     refreshBtn.classList.add('spinning');
 
     try {
-        const res = await fetch(CSV_URL(), { cache: 'no-store' });
-        if (!res.ok) throw new Error('Network response was not ok');
-        const text = await res.text();
-        const rows = parseCSV(text);
-        const dayMap = extractDayMap(rows);
-
+        const dayMap = await fetchDayMap();
         localStorage.setItem(CACHE_KEY, JSON.stringify({ dayMap, fetchedAt: Date.now() }));
         render(dayMap);
         setSyncState('ok');

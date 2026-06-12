@@ -2,10 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "dashboard",
+      "name": "ajay-dashboard",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8000", "--directory", "/Users/ajay/Downloads/ajay-dashboard"],
-      "port": 8000
+      "runtimeArgs": ["server.py"],
+      "cwd": "/Users/ajay/Downloads/ajay-dashboard",
+      "port": 8080,
+      "autoPort": false
     }
   ]
 }
