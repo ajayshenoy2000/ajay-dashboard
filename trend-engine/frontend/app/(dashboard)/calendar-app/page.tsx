@@ -94,13 +94,36 @@ export default function CalendarPage() {
       setConfigured(false);
       return;
     }
+    // Load Google Identity Services script
+    if (!document.getElementById("gsi-script")) {
+      const script = document.createElement("script");
+      script.id = "gsi-script";
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
     const existing = loadToken();
     if (existing) { setSignedIn(true); loadCalendar(existing); }
   }, []);
 
   function getOrCreateTokenClient(onToken: (token: string) => void) {
     const win = window as unknown as { google?: { accounts?: { oauth2?: { initTokenClient: (opts: unknown) => unknown; revoke: (t: string, cb: () => void) => void } } } };
-    if (!win.google?.accounts?.oauth2) { setError("Google Identity Services failed to load."); return; }
+    if (!win.google?.accounts?.oauth2) {
+      // Script not ready yet — wait up to 5s
+      let attempts = 0;
+      const poll = setInterval(() => {
+        attempts++;
+        if (win.google?.accounts?.oauth2) {
+          clearInterval(poll);
+          getOrCreateTokenClient(onToken);
+        } else if (attempts > 25) {
+          clearInterval(poll);
+          setError("Google Identity Services failed to load. Check your connection.");
+        }
+      }, 200);
+      return;
+    }
     if (!tokenClientRef.current) {
       tokenClientRef.current = win.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
