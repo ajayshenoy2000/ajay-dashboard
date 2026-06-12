@@ -6,7 +6,7 @@ import { FileText, Home, Radio, Settings, Sparkles } from "lucide-react";
 
 const items = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/trends", label: "History", icon: Sparkles },
+  { href: "/trends", label: "Trends", icon: Sparkles },
   { href: "/briefs", label: "Briefs", icon: FileText },
   { href: "/sources", label: "Sources", icon: Radio },
   { href: "/settings", label: "Settings", icon: Settings }
