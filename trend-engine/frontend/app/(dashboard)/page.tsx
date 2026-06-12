@@ -6,96 +6,9 @@ import {
   Briefcase, Calendar, CalendarClock, CheckCircle2,
   Clock, ListChecks, Plus, Sparkles, Sun, X,
 } from "lucide-react";
+import { fetchWeekSchedule, type WeekDay } from "@/lib/schedule";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface WeekDay {
-  date: Date; dayNum: number; isToday: boolean;
-  status: "work" | "off" | "unknown"; shift: string | null;
-}
 interface Todo { id: string; text: string; done: boolean }
-
-// ── Work schedule (gviz) ──────────────────────────────────────────────────────
-
-const SHEET_ID = "1v7eb4olwzKJnem0oJy0N1J3y9SY5_KNqNvFsqKuYV4Q";
-
-function currentSheetName() {
-  const n = new Date();
-  return `${n.getFullYear()}/${String(n.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function parseGvizRows(text: string): string[][] {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("no json");
-  const json = JSON.parse(match[0]);
-  if (!json.table?.rows) throw new Error("no table");
-  return json.table.rows.map((row: { c: ({ v: unknown } | null)[] } | null) =>
-    (row?.c ?? []).map((cell) => (cell?.v != null ? String(cell.v).trim() : ""))
-  );
-}
-
-function extractDayMap(rows: string[][]): Record<number, string> {
-  const map: Record<number, string> = {};
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const nameCol = row.indexOf("名前");
-    if (nameCol === -1 || !row.includes("職種")) continue;
-    for (let j = i + 1; j < rows.length; j++) {
-      const r = rows[j];
-      if (r.includes("名前") && r.includes("職種")) break;
-      if (!r.includes("アジャイ")) continue;
-      for (let c = nameCol + 1; c < row.length; c++) {
-        const d = parseInt(row[c], 10);
-        if (isNaN(d) || d < 1 || d > 31 || d in map) continue;
-        map[d] = r[c] || "";
-      }
-      break;
-    }
-  }
-  return map;
-}
-
-function shiftStatus(val: string | null): "work" | "off" {
-  return val === "公休" ? "off" : "work";
-}
-
-function shiftLabel(val: string | null): string {
-  if (!val) return "Work — L'or Clinic";
-  if (val === "公休") return "Day Off";
-  const loc = val.includes("CL") ? "Clinic" : val.includes("Wib") ? "Wibro" : "";
-  const time = val.match(/\d+:\d+~\d+:\d+/)?.[0] ?? "";
-  return loc ? `${loc} · ${time}` : val;
-}
-
-async function fetchWeekSchedule() {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(currentSheetName())}`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error("fetch failed");
-  const dayMap = extractDayMap(parseGvizRows(await res.text()));
-  const today = new Date();
-  const dow = today.getDay();
-  const monOffset = dow === 0 ? -6 : 1 - dow;
-  const week: WeekDay[] = Array.from({ length: 7 }, (_, d) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() + monOffset + d);
-    const dayNum = date.getDate();
-    const val = date.getMonth() === today.getMonth() ? (dayMap[dayNum] ?? null) : null;
-    return {
-      date, dayNum,
-      isToday: date.toDateString() === today.toDateString(),
-      status: val === null ? "unknown" : shiftStatus(val),
-      shift: val,
-    };
-  });
-  const todayVal = dayMap[today.getDate()] ?? null;
-  return {
-    status: todayVal === null ? "unknown" : shiftStatus(todayVal),
-    label: shiftLabel(todayVal),
-    week,
-  };
-}
-
-// ── Dashboard ─────────────────────────────────────────────────────────────────
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -110,7 +23,6 @@ export default function DashboardPage() {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Clock
   useEffect(() => {
     function tick() {
       const now = new Date();
@@ -125,12 +37,10 @@ export default function DashboardPage() {
     return () => clearInterval(id);
   }, []);
 
-  // Work schedule
   useEffect(() => {
     fetchWeekSchedule().then(setWork).catch(() => {});
   }, []);
 
-  // Tasks (Apple Reminders via local server.py; graceful fallback on Vercel)
   useEffect(() => {
     fetch("/api/reminders")
       .then((r) => (r.ok ? r.json() : []))
@@ -174,7 +84,6 @@ export default function DashboardPage() {
 
   return (
     <div className="pb-28">
-      {/* Header */}
       <header className="mb-6">
         <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-ink/40">
           {dateDay} · {timeStr}
@@ -188,9 +97,8 @@ export default function DashboardPage() {
           </span>
           <p className="text-sm leading-6 text-white/85">
             {work
-              ? isOff
-                ? "It's your day off today — enjoy the break."
-                : `You're working today — ${work.label}.`
+              ? isOff ? "It's your day off today — enjoy the break."
+                      : `You're working today — ${work.label}.`
               : "Loading your schedule…"}{" "}
             You have{" "}
             <span className="font-bold text-white">
@@ -201,7 +109,6 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Date + Work widget */}
       <section className="mb-4">
         <h2 className="mb-3 text-4xl font-extrabold leading-none">
           {dateDay}{" "}
@@ -219,19 +126,11 @@ export default function DashboardPage() {
           </div>
           {work?.week && (
             <div className="grid grid-cols-7 gap-1">
-              {work.week.map((day, i) => (
-                <div
-                  key={i}
-                  className={`flex flex-col items-center rounded-lg py-2 text-xs font-semibold transition ${
-                    day.isToday ? "bg-ink text-white" : "text-ink/55 hover:bg-mist"
-                  }`}
-                >
+              {(work.week as WeekDay[]).map((day, i) => (
+                <div key={i} className={`flex flex-col items-center rounded-lg py-2 text-xs font-semibold transition ${day.isToday ? "bg-ink text-white" : "text-ink/55 hover:bg-mist"}`}>
                   <span className="text-[10px] font-medium">{DAY_LABELS[i]}</span>
                   <span className="my-0.5 text-sm font-bold">{day.dayNum}</span>
-                  <span className={`h-1.5 w-1.5 rounded-full ${
-                    day.status === "work" ? "bg-coral" :
-                    day.status === "off"  ? "bg-sage"  : "bg-ink/20"
-                  }`} />
+                  <span className={`h-1.5 w-1.5 rounded-full ${day.status === "work" ? "bg-coral" : day.status === "off" ? "bg-sage" : "bg-ink/20"}`} />
                 </div>
               ))}
             </div>
@@ -239,7 +138,6 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Quick stats */}
       <div className="mb-4 grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-ink/10 bg-white p-4 shadow-soft">
           <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-coral/15 text-coral">
@@ -257,7 +155,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* App grid */}
       <section className="mb-4">
         <h2 className="mb-3 text-base font-bold">Your Apps</h2>
         <div className="grid grid-cols-2 gap-3">
@@ -284,7 +181,6 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Tasks */}
       <section>
         <h2 className="mb-3 flex items-center gap-2 text-base font-bold">
           <CheckCircle2 className="h-4 w-4 text-sage" /> My Tasks
@@ -299,14 +195,10 @@ export default function DashboardPage() {
               placeholder="What needs doing?"
               className="min-w-0 flex-1 rounded-lg border border-ink/15 bg-mist px-3 py-2 text-sm outline-none focus:border-coral focus:ring-1 focus:ring-coral/30"
             />
-            <button
-              onClick={addTodo}
-              className="rounded-lg bg-coral px-4 py-2 text-sm font-bold text-white transition hover:bg-coral/85"
-            >
+            <button onClick={addTodo} className="rounded-lg bg-coral px-4 py-2 text-sm font-bold text-white transition hover:bg-coral/85">
               Add
             </button>
           </div>
-
           {!todosReady ? (
             <p className="py-3 text-center text-sm text-ink/40">Loading from Reminders…</p>
           ) : todos.length === 0 ? (
@@ -315,16 +207,9 @@ export default function DashboardPage() {
             <ul className="space-y-1">
               {todos.map((todo) => (
                 <li key={todo.id} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-mist">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 shrink-0 accent-coral"
-                    onChange={() => completeTodo(todo.id)}
-                  />
+                  <input type="checkbox" className="h-4 w-4 shrink-0 accent-coral" onChange={() => completeTodo(todo.id)} />
                   <span className="flex-1 text-sm">{todo.text}</span>
-                  <button
-                    onClick={() => deleteTodo(todo.id)}
-                    className="shrink-0 text-ink/25 transition hover:text-coral"
-                  >
+                  <button onClick={() => deleteTodo(todo.id)} className="shrink-0 text-ink/25 transition hover:text-coral">
                     <X className="h-4 w-4" />
                   </button>
                 </li>
