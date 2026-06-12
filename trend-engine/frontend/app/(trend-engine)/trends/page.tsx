@@ -3,11 +3,11 @@ import { Header } from "@/components/Header";
 import { SearchControls } from "@/components/SearchControls";
 import { TrendCard } from "@/components/TrendCard";
 import { TrendFilter } from "@/components/TrendFilter";
-import { getRecordThisWeek, getSettings, getTopTrends, getTrendHistory } from "@/lib/api";
+import { getRecordThisWeek, getSettings, getTopTrends } from "@/lib/api";
 
-export default async function TrendsPage() {
-  const [trends, recordTopics, settings, history] = await Promise.all([
-    getTopTrends(), getRecordThisWeek(), getSettings(), getTrendHistory()
+export default async function DiscoverPage() {
+  const [trends, recordTopics, settings] = await Promise.all([
+    getTopTrends(), getRecordThisWeek(), getSettings()
   ]);
   const top = trends[0];
 
@@ -52,13 +52,6 @@ export default async function TrendsPage() {
           </div>
         </section>
       </div>
-
-      {history.length > 0 && (
-        <section className="mt-8">
-          <h2 className="mb-3 text-xl font-bold">History</h2>
-          <TrendFilter trends={history} />
-        </section>
-      )}
     </div>
   );
 }
