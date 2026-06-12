@@ -1,0 +1,14 @@
+channel:
+  name: "L'or Clinic YouTube"
+  doctor: "りき先生"
+  format: "SNSで話題の〇〇、実際どうなの？"
+  target_duration_minutes: "3-5"
+  categories:
+    - 二重
+    - クマ取り
+    - 危ないクリニック
+    - 準備
+    - ダウンタイム
+    - 美容医療全般
+    - ゲスト
+    - トレンド解説

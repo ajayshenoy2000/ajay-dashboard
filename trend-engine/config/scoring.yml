@@ -1,0 +1,7 @@
+weights:
+  trend_momentum: 25
+  google_search_demand: 20
+  medical_relevance: 20
+  youtube_historical_fit: 20
+  conversion_potential: 10
+  safety_brand_fit: 5

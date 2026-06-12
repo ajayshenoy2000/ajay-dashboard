@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+data/*.sqlite3
+
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+.env
+.DS_Store
+outputs/*.md
+!outputs/.gitkeep
