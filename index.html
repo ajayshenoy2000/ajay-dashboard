@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app page-enter">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-text">
+                    <p class="eyebrow" id="eyebrow">Friday · 18:21</p>
+                    <h1 class="greeting" id="greeting">Good evening, <span class="accent">Ajay</span></h1>
+                </div>
+                <button class="avatar-btn" id="settingsBtn" aria-label="Settings">
+                    <span class="avatar-emoji">👋</span>
+                </button>
+            </div>
+
+            <div class="hero-card">
+                <div class="hero-glow"></div>
+                <div class="hero-content">
+                    <span class="hero-tag"><i data-lucide="sparkles"></i> Daily brief</span>
+                    <p class="hero-text" id="heroText">You've got <strong>2 events</strong> and <strong id="heroTaskCount">0 tasks</strong> on deck today. Let's make it count.</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main stagger-list">
+            <!-- Today Bar -->
+            <section class="today-bar" id="todayBar">
+                <div class="today-pill" id="workPill">
+                    <div class="today-pill-icon" id="workPillIcon"><i data-lucide="briefcase"></i></div>
+                    <div class="today-pill-meta">
+                        <span class="today-pill-label">Work Status</span>
+                        <span class="today-pill-value" id="workPillValue">Loading…</span>
+                    </div>
+                </div>
+                <div class="today-pill" id="calPill">
+                    <div class="today-pill-icon today-pill-icon--dark"><i data-lucide="calendar-heart"></i></div>
+                    <div class="today-pill-meta">
+                        <span class="today-pill-label">Today's Events</span>
+                        <span class="today-pill-value" id="calPillValue">Loading…</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Stats -->
+            <section class="quick-stats">
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon--orange"><i data-lucide="list-checks"></i></div>
+                    <div class="stat-meta">
+                        <span class="stat-value" id="taskCount">0</span>
+                        <span class="stat-label">Tasks open</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon--dark"><i data-lucide="clock"></i></div>
+                    <div class="stat-meta">
+                        <span class="stat-value" id="quickTime">--:--</span>
+                        <span class="stat-label">Local time</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Schedule Widget -->
+            <section class="widget">
+                <div class="widget-header">
+                    <div class="widget-heading">
+                        <i data-lucide="calendar-days" class="widget-icon"></i>
+                        <h2>Today's Schedule</h2>
+                    </div>
+                    <a href="calendar/index.html" class="widget-link">View all <i data-lucide="arrow-right"></i></a>
+                </div>
+                <div class="schedule-list" id="scheduleList">
+                    <div class="empty-state">No events scheduled</div>
+                </div>
+            </section>
+
+            <!-- App Launcher -->
+            <section class="widget">
+                <div class="widget-header">
+                    <div class="widget-heading">
+                        <i data-lucide="layout-grid" class="widget-icon"></i>
+                        <h2>Your Apps</h2>
+                    </div>
+                </div>
+                <div class="app-grid" id="appGrid">
+                    <a href="https://lor-trend-engine.vercel.app" target="_blank" class="app-card app-card--featured">
+                        <div class="app-card-glow"></div>
+                        <div class="app-icon"><i data-lucide="sparkles"></i></div>
+                        <div class="app-name">Trend Intelligence</div>
+                        <div class="app-desc">Analyse and Summarise Trends</div>
+                        <div class="app-arrow"><i data-lucide="arrow-up-right"></i></div>
+                    </a>
+                    <a href="schedule/index.html" class="app-card app-card--featured">
+                        <div class="app-card-glow"></div>
+                        <div class="app-icon"><i data-lucide="calendar-clock"></i></div>
+                        <div class="app-name">Work Schedule</div>
+                        <div class="app-desc">Auto-synced shift calendar</div>
+                        <div class="app-arrow"><i data-lucide="arrow-up-right"></i></div>
+                    </a>
+                    <a href="calendar/index.html" class="app-card app-card--featured">
+                        <div class="app-card-glow"></div>
+                        <div class="app-icon"><i data-lucide="calendar-heart"></i></div>
+                        <div class="app-name">Calendar</div>
+                        <div class="app-desc">Live Google Calendar feed</div>
+                        <div class="app-arrow"><i data-lucide="arrow-up-right"></i></div>
+                    </a>
+                    <div class="app-card app-card--placeholder">
+                        <div class="app-icon"><i data-lucide="plus"></i></div>
+                        <div class="app-name">Add App</div>
+                        <div class="app-desc">Coming soon</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Todo Widget -->
+            <section class="widget">
+                <div class="widget-header">
+                    <div class="widget-heading">
+                        <i data-lucide="check-circle-2" class="widget-icon"></i>
+                        <h2>My Tasks</h2>
+                    </div>
+                </div>
+                <div class="todo-container">
+                    <div class="todo-input-wrapper">
+                        <i data-lucide="plus-circle" class="todo-input-icon"></i>
+                        <input type="text" id="todoInput" placeholder="What needs doing?" class="todo-input">
+                        <button id="addTodoBtn" class="add-todo-btn">Add</button>
+                    </div>
+                    <div class="todo-list" id="todoList">
+                        <div class="empty-state">No tasks yet. Add one to get started!</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Powered by <span class="footer-accent">Claude</span></p>
+        </footer>
+    </div>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="config.js"></script>
+    <script src="calendar/calendar-lib.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

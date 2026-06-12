@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Schedule · Ajay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app page-enter">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-text">
+                    <a href="../index.html" class="back-link"><i data-lucide="arrow-left"></i> Home</a>
+                    <h1 class="greeting" style="margin-top:0.6rem;">Work <span class="accent">Schedule</span></h1>
+                </div>
+                <button class="avatar-btn" id="refreshBtn" aria-label="Refresh">
+                    <i data-lucide="refresh-cw"></i>
+                </button>
+            </div>
+
+            <div class="hero-card">
+                <div class="hero-glow"></div>
+                <div class="hero-content">
+                    <span class="hero-tag"><i data-lucide="calendar-clock"></i> Today · <span id="todayDate">--</span></span>
+                    <p class="hero-text" id="todayStatus">Loading your shift status...</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main stagger-list">
+            <!-- Status Strip -->
+            <section class="quick-stats">
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon--orange"><i data-lucide="briefcase"></i></div>
+                    <div class="stat-meta">
+                        <span class="stat-value" id="workDaysCount">--</span>
+                        <span class="stat-label">Work days left</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon--dark"><i data-lucide="palm-tree"></i></div>
+                    <div class="stat-meta">
+                        <span class="stat-value" id="daysOffCount">--</span>
+                        <span class="stat-label">Days off left</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Calendar -->
+            <section class="widget">
+                <div class="widget-header">
+                    <div class="widget-heading">
+                        <i data-lucide="calendar-days" class="widget-icon"></i>
+                        <h2 id="monthTitle">Schedule</h2>
+                    </div>
+                    <span class="sync-pill" id="syncPill"><i data-lucide="check-circle-2"></i> Synced</span>
+                </div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <div class="empty-state">Fetching your schedule...</div>
+                </div>
+                <div class="legend">
+                    <span class="legend-item"><span class="legend-dot legend-dot--work"></span> Work day</span>
+                    <span class="legend-item"><span class="legend-dot legend-dot--off"></span> Day off</span>
+                    <span class="legend-item"><span class="legend-dot legend-dot--today"></span> Today</span>
+                </div>
+            </section>
+
+            <!-- Upcoming -->
+            <section class="widget">
+                <div class="widget-header">
+                    <div class="widget-heading">
+                        <i data-lucide="list" class="widget-icon"></i>
+                        <h2>Upcoming Days Off</h2>
+                    </div>
+                </div>
+                <div class="schedule-list" id="upcomingOff">
+                    <div class="empty-state">No upcoming days off found</div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Auto-synced from Google Sheets · Powered by <span class="footer-accent">Claude</span></p>
+        </footer>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
