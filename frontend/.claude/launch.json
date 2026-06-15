@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ajay-next",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "-p", "3003"],
+      "cwd": "/Users/ajay/Downloads/ajay-dashboard/frontend",
+      "port": 3003
+    }
+  ]
+}
