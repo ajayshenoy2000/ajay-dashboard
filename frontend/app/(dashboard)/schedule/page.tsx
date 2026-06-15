@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowLeft, Briefcase, CalendarClock, RefreshCw, Sun } from "lucide-react";
 import { fetchDayMap } from "@/lib/schedule";
 
 type DayMap = Record<number, string>;
@@ -81,8 +82,8 @@ export default function SchedulePage() {
       {/* Header */}
       <div className="mb-5 flex items-start justify-between">
         <div>
-          <Link href="/" className="back-link mb-2 inline-flex items-center gap-1.5 text-[0.82rem] font-semibold text-ink/60 no-underline hover:text-coral">
-            ← Home
+          <Link href="/" className="mb-2 inline-flex items-center gap-1.5 text-[0.82rem] font-semibold text-ink/60 no-underline transition hover:text-coral">
+            <ArrowLeft className="h-3.5 w-3.5" /> Home
           </Link>
           <h1 className="mt-2 text-[2rem] font-extrabold tracking-tight">
             Work <span className="text-coral">Schedule</span>
@@ -93,16 +94,7 @@ export default function SchedulePage() {
           aria-label="Refresh"
           className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-2xl border-0 bg-white shadow-soft transition hover:rotate-[-8deg] hover:scale-105 active:scale-95"
         >
-          <svg
-            className={`h-5 w-5 text-ink ${spinning ? "animate-spin" : ""}`}
-            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"
-          >
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-            <path d="M21 3v5h-5" />
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-            <path d="M8 16H3v5" />
-          </svg>
+          <RefreshCw className={`h-5 w-5 text-ink ${spinning ? "animate-spin" : ""}`} />
         </button>
       </div>
 
@@ -114,7 +106,7 @@ export default function SchedulePage() {
         <div className="pointer-events-none absolute inset-y-0 left-0 w-[60%] bg-[linear-gradient(100deg,transparent_0%,rgba(255,255,255,0.07)_50%,transparent_100%)]" style={{ animation: "shimmer 5s ease-in-out infinite 1s" }} />
         <div className="relative z-10">
           <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-[rgba(255,159,28,0.18)] px-3 py-1.5 text-[0.72rem] font-bold uppercase tracking-wider text-[#ff9f1c]">
-            🗓 Today · {todayStr}
+            <CalendarClock className="h-3.5 w-3.5" /> Today · {todayStr}
           </span>
           <p className="text-[0.98rem] leading-relaxed text-white/88">
             {sync === "loading"
@@ -122,7 +114,7 @@ export default function SchedulePage() {
               : sync === "error"
               ? "Could not load schedule. Check your connection."
               : todayOff
-              ? <>It&apos;s your <strong className="text-white">day off</strong> today — enjoy the break! 🌴</>
+              ? <>It&apos;s your <strong className="text-white">day off</strong> today — enjoy the break!</>
               : <>You&apos;re <strong className="text-white">scheduled to work</strong> today at L&apos;or Clinic Omotesando. Have a great one!</>}
           </p>
         </div>
@@ -131,15 +123,15 @@ export default function SchedulePage() {
       {/* Stats strip */}
       <div className="stagger-list mb-5 grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-ink/10 bg-white p-4 shadow-soft">
-          <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-[rgba(255,159,28,0.12)] text-[#f3801c]">
-            💼
+          <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-coral/15 text-coral">
+            <Briefcase className="h-4 w-4" />
           </div>
           <div className="text-2xl font-bold">{sync === "loading" ? "–" : workCount}</div>
           <div className="text-xs font-semibold text-ink/50">Work days left</div>
         </div>
         <div className="rounded-2xl border border-ink/10 bg-white p-4 shadow-soft">
-          <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-ink/8 text-ink/60">
-            🌴
+          <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-sage/15 text-sage">
+            <Sun className="h-4 w-4" />
           </div>
           <div className="text-2xl font-bold">{sync === "loading" ? "–" : offCount}</div>
           <div className="text-xs font-semibold text-ink/50">Days off left</div>

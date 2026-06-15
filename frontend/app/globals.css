@@ -11,18 +11,16 @@
   --font-hiragino: 'Hiragino Sans', 'Hiragino Sans W4', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
   background: #f5f7f5;
   color: #18211f;
   font-family: var(--font-poppins), var(--font-hiragino);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Use Hiragino Sans for Japanese text */
 :lang(ja) {
   font-family: var(--font-hiragino), var(--font-poppins);
 }
@@ -32,87 +30,101 @@ a {
   text-decoration: none;
 }
 
-button,
-input,
-select,
-textarea {
+button, input, select, textarea {
   font: inherit;
 }
 
-/* Fluid global transitions - optimized for GPU */
-a,
-button,
-input,
-select,
-textarea {
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease,
-    opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+/* ── Global micro-interaction transitions (GPU-safe) ── */
+a, button, input, select, textarea {
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    opacity 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
   will-change: auto;
 }
 
-a:hover,
-button:hover {
-  will-change: transform, background-color;
+button:active, a:active {
+  transform: scale(0.97);
 }
 
-button:active,
-a:active {
-  transform: scale(0.98);
-}
-
+/* ── Page entrance ── */
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-.fadeIn {
-  animation: fadeIn 0.15s ease;
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 .page-enter {
-  animation: fadeInUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: fadeInUp 0.22s cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 
+.tab-enter {
+  animation: scaleIn 0.18s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+/* ── Staggered list children ── */
 .stagger-list > * {
-  animation: fadeInUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: fadeInUp 0.22s cubic-bezier(0.25, 1, 0.5, 1) both;
   will-change: opacity, transform;
 }
 
-.stagger-list > *:nth-child(1) { animation-delay: 0.01s; }
-.stagger-list > *:nth-child(2) { animation-delay: 0.03s; }
-.stagger-list > *:nth-child(3) { animation-delay: 0.05s; }
-.stagger-list > *:nth-child(4) { animation-delay: 0.07s; }
-.stagger-list > *:nth-child(5) { animation-delay: 0.09s; }
-.stagger-list > *:nth-child(6) { animation-delay: 0.11s; }
-.stagger-list > *:nth-child(7) { animation-delay: 0.13s; }
-.stagger-list > *:nth-child(8) { animation-delay: 0.15s; }
-.stagger-list > *:nth-child(n+9) { animation-delay: 0.17s; }
+.stagger-list > *:nth-child(1)  { animation-delay: 0.00s; }
+.stagger-list > *:nth-child(2)  { animation-delay: 0.04s; }
+.stagger-list > *:nth-child(3)  { animation-delay: 0.08s; }
+.stagger-list > *:nth-child(4)  { animation-delay: 0.12s; }
+.stagger-list > *:nth-child(5)  { animation-delay: 0.16s; }
+.stagger-list > *:nth-child(6)  { animation-delay: 0.20s; }
+.stagger-list > *:nth-child(7)  { animation-delay: 0.24s; }
+.stagger-list > *:nth-child(8)  { animation-delay: 0.28s; }
+.stagger-list > *:nth-child(n+9){ animation-delay: 0.30s; }
 
+/* ── Shimmer skeleton ── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #e8eae8 25%, #f0f2f0 50%, #e8eae8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+
+/* ── Floating glow animation (hero cards) ── */
+@keyframes floatGlow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(10px, -10px) scale(1.06); }
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* ── Reduced-motion override ── */
 @media (prefers-reduced-motion: reduce) {
-  .page-enter,
-  .stagger-list > * {
+  .page-enter, .tab-enter, .stagger-list > * {
     animation: none;
   }
-  a,
-  button,
-  input,
-  select,
-  textarea {
-    transition: none;
+  a, button, input, select, textarea {
+    transition: background-color 0.1s ease, color 0.1s ease;
   }
 }

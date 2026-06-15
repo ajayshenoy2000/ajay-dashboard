@@ -1,5 +1,5 @@
 {
-  "/(dashboard)/schedule/page": "app/(dashboard)/schedule/page.js",
-  "/(dashboard)/calendar-app/page": "app/(dashboard)/calendar-app/page.js",
+  "/(trend-engine)/trends/page": "app/(trend-engine)/trends/page.js",
+  "/(trend-engine)/trends/history/page": "app/(trend-engine)/trends/history/page.js",
   "/(dashboard)/page": "app/(dashboard)/page.js"
 }

@@ -1,13 +1,6 @@
-import { Header } from "@/components/Header";
-import { SourceFeed } from "@/components/SourceFeed";
-import { getSources } from "@/lib/api";
+import { redirect } from "next/navigation";
 
-export default async function SourcesPage() {
-  const sources = await getSources();
-  return (
-    <div>
-      <Header title="Source Feed" subtitle="X, Google News, Google Trends, and YouTube signals prepared for review and filtering." />
-      <SourceFeed sources={sources} />
-    </div>
-  );
+// Sources is now a sub-tab inside /trends
+export default function SourcesRedirect() {
+  redirect("/trends");
 }

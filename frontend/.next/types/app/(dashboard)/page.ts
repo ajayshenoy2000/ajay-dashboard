@@ -1,4 +1,4 @@
-// File: /Users/ajay/Downloads/ajay-dashboard/trend-engine/frontend/app/(dashboard)/page.tsx
+// File: /Users/ajay/Downloads/ajay-dashboard/frontend/app/(dashboard)/page.tsx
 import * as entry from '../../../../app/(dashboard)/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

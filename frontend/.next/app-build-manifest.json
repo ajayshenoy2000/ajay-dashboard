@@ -21,15 +21,30 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/(dashboard)/schedule/page": [
+    "/(trend-engine)/trends/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/schedule/page.js"
+      "static/chunks/app/(trend-engine)/trends/page.js"
     ],
-    "/(dashboard)/calendar-app/page": [
+    "/(trend-engine)/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/calendar-app/page.js"
+      "static/chunks/app/(trend-engine)/layout.js"
+    ],
+    "/(trend-engine)/loading": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(trend-engine)/loading.js"
+    ],
+    "/(trend-engine)/trends/history/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(trend-engine)/trends/history/page.js"
+    ],
+    "/(trend-engine)/briefs/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(trend-engine)/briefs/page.js"
     ]
   }
 }
