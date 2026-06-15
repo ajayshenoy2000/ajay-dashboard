@@ -49,7 +49,7 @@ class Settings:
     anthropic_api_key: str | None = os.getenv("ANTHROPIC_API_KEY")
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
     model_provider: str = os.getenv("MODEL_PROVIDER", "mock")
-    analysis_model_provider: str = os.getenv("ANALYSIS_MODEL_PROVIDER", "gpt")
+    analysis_model_provider: str = os.getenv("ANALYSIS_MODEL_PROVIDER", "claude")
     brief_model_provider: str = os.getenv("BRIEF_MODEL_PROVIDER", "claude")
     cors_origin: str = os.getenv("CORS_ORIGIN", "http://localhost:3000")
     supabase_url: str | None = os.getenv("SUPABASE_URL")

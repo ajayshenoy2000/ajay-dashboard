@@ -11,8 +11,9 @@ logger = logging.getLogger(__name__)
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 
-ANTHROPIC_MODEL = "claude-opus-4-8"
-OPENAI_MODEL = "gpt-4o"
+ANTHROPIC_MODEL = "claude-sonnet-4-6"
+ANTHROPIC_HAIKU_MODEL = "claude-haiku-4-5"
+OPENAI_MODEL = "gpt-4o-mini"
 
 
 def load_prompt(name: str) -> str:

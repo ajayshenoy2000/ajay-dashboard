@@ -11,6 +11,7 @@ from backend.config import DEFAULT_KEYWORDS, settings
 from backend.db.models import Trend, VideoBrief
 from backend.db.supabase_client import get_client
 from backend.llm.analysis import enrich_trends_with_analysis
+from backend.llm.x_classifier import classify_and_filter
 from backend.llm.brief_generator import generate_riki_style_brief
 from backend.processors.channel_profile import compute_channel_baseline
 from backend.processors.cluster import cluster_by_keyword
@@ -142,7 +143,8 @@ def collect_and_rank_trends(
         keywords_to_use = expand_keywords(keywords_to_use, analysis_model)
         items = []
         if "x" in sources_to_use:
-            items.extend(collect_x_posts(keywords_to_use, hours=hours, region_code=region_to_use))
+            x_raw = collect_x_posts(keywords_to_use, hours=hours, region_code=region_to_use)
+            items.extend(classify_and_filter(x_raw))
         if "google_news" in sources_to_use:
             items.extend(collect_google_news(keywords_to_use, hours=hours, region_code=region_to_use))
         if "google_trends" in sources_to_use:
@@ -165,7 +167,7 @@ def collect_and_rank_trends(
             reasons = rejection_reasons(text)
             if reasons:
                 continue
-            score = score_trend(keyword, sources, youtube_history)
+            score = score_trend(keyword, sources, youtube_history, all_sources=items)
             trends.append(
                 Trend(
                     id=keyword.lower().replace(" ", "-"),

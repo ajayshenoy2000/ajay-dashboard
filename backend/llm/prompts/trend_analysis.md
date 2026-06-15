@@ -1,3 +1,6 @@
+You will be given a keyword, collected source data, and an optional X/Twitter signal summary.
+Use the X signal (tweet count, dominant sentiment, sample tweets) to make the title, summary, and why_it_matters vivid and specific — quote real patient language where it adds colour.
+
 Analyze this Japanese beauty/cosmetic-medicine trend candidate for:
 1. patient anxiety
 2. misinformation

@@ -10,15 +10,39 @@ from backend.processors.safety_filter import rejection_reasons
 
 CONVERSION_TERMS = ["相談", "施術", "ダウンタイム", "副作用", "失敗", "デザイン", "適応"]
 
+_CROSS_SOURCE_WEIGHTS = {"x": 0.35, "google_trends": 0.30, "google_news": 0.25, "youtube": 0.10}
+
 
 def _bounded(value: float, maximum: float) -> float:
     return max(0, min(maximum, value))
+
+
+def cross_source_confidence(keyword: str, all_sources: list[SourceItem]) -> float:
+    """0.0–1.0: fraction of source-type weights present for this keyword."""
+    present = {item.source for item in all_sources if item.keyword == keyword}
+    return sum(_CROSS_SOURCE_WEIGHTS.get(s, 0) for s in present)
+
+
+def x_signal(x_items: list[SourceItem]) -> float:
+    """0.0–1.0 composite X signal: volume + peak authority + anxiety boost."""
+    if not x_items:
+        return 0.0
+
+    scores = [float(item.metadata.get("x_score", 0)) for item in x_items]
+    volume_score = min(log10(len(scores) + 1) / 2, 1.0)
+    peak_score = min(max(scores) / 100, 1.0) if scores else 0.0
+
+    anxious = sum(1 for i in x_items if i.metadata.get("sentiment") == "anxious")
+    anxiety_boost = (anxious / len(x_items)) * 0.3
+
+    return (volume_score * 0.4 + peak_score * 0.6) * (1 + anxiety_boost)
 
 
 def score_trend(
     keyword: str,
     sources: list[SourceItem],
     youtube_history: list[YouTubeVideo],
+    all_sources: list[SourceItem] | None = None,
     weights: dict[str, int] | None = None,
 ) -> ScoreBreakdown:
     active_weights = weights or SCORING_WEIGHTS
@@ -31,10 +55,16 @@ def score_trend(
         category = classify_topic(text)
         related_youtube = [video for video in youtube_history if video.category == category]
 
-    trend_momentum = _bounded(
-        (log10(engagement + 10) / 3.0 + source_diversity * 0.12) * active_weights["trend_momentum"],
-        active_weights["trend_momentum"],
-    )
+    # X-enriched trend momentum
+    x_items = [s for s in sources if s.source == "x"]
+    if x_items and any(s.metadata.get("x_score") is not None for s in x_items):
+        xs = x_signal(x_items)
+        momentum_raw = (xs + source_diversity * 0.12) * active_weights["trend_momentum"]
+    else:
+        momentum_raw = (log10(engagement + 10) / 3.0 + source_diversity * 0.12) * active_weights["trend_momentum"]
+
+    trend_momentum = _bounded(momentum_raw, active_weights["trend_momentum"])
+
     google_search_demand = _bounded(
         (google_signal / max(1, len(sources)) + (1 if any(source.source == "google_trends" for source in sources) else 0.35))
         / 1.6
@@ -53,6 +83,13 @@ def score_trend(
     )
     safety_penalty = len(rejection_reasons(text)) * 2.5
     safety = _bounded(active_weights["safety_brand_fit"] - safety_penalty, active_weights["safety_brand_fit"])
+
+    # Cross-source confidence multiplier (0.7–1.0): applied to trend_momentum
+    # since it's the most signal-driven component. Single-source topics get 0.7x.
+    if all_sources:
+        confidence = cross_source_confidence(keyword, all_sources)
+        multiplier = 0.7 + 0.3 * confidence
+        trend_momentum = _bounded(trend_momentum * multiplier, active_weights["trend_momentum"])
 
     return ScoreBreakdown(
         trend_momentum=trend_momentum,
