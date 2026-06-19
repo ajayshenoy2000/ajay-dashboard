@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Briefcase, CalendarClock, RefreshCw, Sun } from "lucide-react";
-import { fetchDayMap } from "@/lib/schedule";
+import { ArrowLeft, Briefcase, CalendarClock, RefreshCw, Sun, X } from "lucide-react";
+import { fetchDayMap, shiftLabel } from "@/lib/schedule";
 
 type DayMap = Record<number, string>;
 type Sync = "loading" | "ok" | "cached" | "error";
@@ -13,10 +13,70 @@ const CACHE_KEY = "workScheduleCache";
 
 function isOff(s: string) { return s === "公休"; }
 
+// ─── Day Detail Sheet ────────────────────────────────────────────────────────
+function DayDetailSheet({
+  day, month, year, dayMap, onClose,
+}: {
+  day: number; month: number; year: number; dayMap: DayMap; onClose: () => void;
+}) {
+  const date = new Date(year, month - 1, day);
+  const shift = dayMap[day] ?? null;
+  const off = isOff(shift ?? "");
+  const label = shiftLabel(shift);
+  const dateStr = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const today = new Date();
+  const isToday = date.toDateString() === today.toDateString();
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-t-3xl bg-white p-6 pb-10 shadow-[0_-8px_40px_rgba(24,33,31,0.18)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-ink/15" />
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${off ? "bg-sage/15 text-sage" : "bg-coral/15 text-coral"}`}>
+              {off ? <Sun className="h-5 w-5" /> : <Briefcase className="h-5 w-5" />}
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-ink/40">
+                {isToday ? "Today" : "Schedule"}
+              </p>
+              <p className="font-bold">{dateStr}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded-full p-1.5 text-ink/30 transition hover:bg-mist hover:text-ink/60">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className={`rounded-2xl px-4 py-3.5 ${off ? "bg-sage/10" : shift ? "bg-coral/8" : "bg-mist"}`}>
+          <p className={`text-base font-bold ${off ? "text-sage" : shift ? "text-coral" : "text-ink/40"}`}>
+            {off ? "Day Off" : shift ? label : "No data for this day"}
+          </p>
+          {!off && shift && (
+            <p className="mt-0.5 text-sm text-ink/55">{shift}</p>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          className="mt-4 w-full rounded-2xl bg-mist py-3 text-sm font-semibold text-ink/60 transition hover:bg-ink/8"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function SchedulePage() {
   const [dayMap, setDayMap] = useState<DayMap | null>(null);
   const [sync, setSync] = useState<Sync>("loading");
   const [spinning, setSpinning] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const now = new Date();
   const year = now.getFullYear();
@@ -79,6 +139,17 @@ export default function SchedulePage() {
 
   return (
     <div className="page-enter pb-10">
+      {/* Day detail sheet */}
+      {selectedDay !== null && dayMap && (
+        <DayDetailSheet
+          day={selectedDay}
+          month={month}
+          year={year}
+          dayMap={dayMap}
+          onClose={() => setSelectedDay(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="mb-5 flex items-start justify-between">
         <div>
@@ -165,10 +236,11 @@ export default function SchedulePage() {
             const off = isOff(dayMap?.[d] ?? "");
             const today = d === todayNum;
             return (
-              <div
+              <button
                 key={d}
+                onClick={() => setSelectedDay(d)}
                 style={off ? { background: "linear-gradient(150deg, #ff9f1c 0%, #f3801c 100%)", boxShadow: "0 8px 20px rgba(255,159,28,0.3)" } : today ? { boxShadow: "0 0 0 2.5px #20201d inset" } : undefined}
-                className={`relative flex aspect-square flex-col items-center justify-center rounded-[12px] text-[0.9rem] font-semibold transition-all duration-200 hover:-translate-y-[3px] hover:scale-105
+                className={`relative flex aspect-square flex-col items-center justify-center rounded-[12px] text-[0.9rem] font-semibold transition-all duration-200 hover:-translate-y-[3px] hover:scale-105 active:scale-95
                   ${off ? "text-white" : today ? "bg-[#f9f7f4] text-ink" : weekend ? "bg-[#f9f7f4] text-ink/40" : "bg-[#f9f7f4] text-ink"}
                 `}
               >
@@ -183,7 +255,7 @@ export default function SchedulePage() {
                     }}
                   />
                 )}
-              </div>
+              </button>
             );
           })}
         </div>

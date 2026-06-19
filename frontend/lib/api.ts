@@ -215,9 +215,26 @@ export interface Reminder {
   done: boolean;
 }
 
-export async function getReminders(): Promise<{ reminders: Reminder[]; available: boolean }> {
+export interface RemindersHealth {
+  available: boolean;
+  list: string;
+  platform: string;
+}
+
+export async function getRemindersHealth(): Promise<RemindersHealth> {
   try {
-    const response = await fetch(`${API_BASE}/api/reminders`, { cache: "no-store" });
+    const response = await fetch(`${API_BASE}/api/reminders/health`, { cache: "no-store" });
+    if (!response.ok) return { available: false, list: "Dashboard", platform: "unknown" };
+    return (await response.json()) as RemindersHealth;
+  } catch {
+    return { available: false, list: "Dashboard", platform: "unknown" };
+  }
+}
+
+export async function getReminders(includeCompleted = false): Promise<{ reminders: Reminder[]; available: boolean }> {
+  try {
+    const url = `${API_BASE}/api/reminders${includeCompleted ? "?include_completed=true" : ""}`;
+    const response = await fetch(url, { cache: "no-store" });
     if (response.status === 503) return { reminders: [], available: false };
     if (!response.ok) return { reminders: [], available: true };
     return { reminders: (await response.json()) as Reminder[], available: true };
@@ -256,5 +273,38 @@ export async function deleteReminder(id: string): Promise<void> {
   if (!response.ok) {
     const message = await response.text();
     throw new Error(message || "Failed to delete reminder");
+  }
+}
+
+export async function getRemindersList(): Promise<string> {
+  try {
+    const response = await fetch(`${API_BASE}/api/reminders/list`, { cache: "no-store" });
+    if (!response.ok) return "Dashboard";
+    return ((await response.json()) as { list: string }).list;
+  } catch {
+    return "Dashboard";
+  }
+}
+
+export async function setRemindersList(list: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/api/reminders/list`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ list })
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Failed to update reminders list");
+  }
+  return ((await response.json()) as { list: string }).list;
+}
+
+export async function getAvailableLists(): Promise<string[]> {
+  try {
+    const response = await fetch(`${API_BASE}/api/reminders/lists`, { cache: "no-store" });
+    if (!response.ok) return [];
+    return (await response.json()) as string[];
+  } catch {
+    return [];
   }
 }

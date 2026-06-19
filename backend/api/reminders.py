@@ -15,7 +15,7 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/api/reminders")
 
 REMINDERS_AVAILABLE = platform.system() == "Darwin"
-REMINDERS_LIST = "Dashboard"
+_reminders_list: str = "Dashboard"
 
 
 class CreateReminderRequest(BaseModel):
@@ -52,23 +52,42 @@ def _escape(s: str) -> str:
     return s.replace("\\", "\\\\").replace('"', '\\"')
 
 
-def _get_reminders(list_name: str) -> list[dict]:
+def _get_reminders(list_name: str, include_completed: bool = False) -> list[dict]:
     _ensure_list(list_name)
     safe = _escape(list_name)
+    filter_clause = "" if include_completed else " whose completed is false"
     out = _run(f'''
 tell application "Reminders"
     set output to ""
-    repeat with r in (reminders of list "{safe}" whose completed is false)
-        set output to output & (id of r) & "\\t" & (name of r) & "\\n"
+    repeat with r in (reminders of list "{safe}"{filter_clause})
+        set doneFlag to "0"
+        if completed of r then set doneFlag to "1"
+        set output to output & (id of r) & "\\t" & (name of r) & "\\t" & doneFlag & "\\n"
     end repeat
     return output
 end tell''')
     items = []
     for line in out.split("\n"):
         if "\t" in line:
-            rid, name = line.split("\t", 1)
-            items.append({"id": rid.strip(), "text": name.strip(), "done": False})
+            parts = line.split("\t", 2)
+            if len(parts) >= 2:
+                rid = parts[0].strip()
+                name = parts[1].strip()
+                done = len(parts) >= 3 and parts[2].strip() == "1"
+                items.append({"id": rid, "text": name, "done": done})
     return items
+
+
+def _get_all_lists() -> list[str]:
+    out = _run('''
+tell application "Reminders"
+    set output to ""
+    repeat with l in lists
+        set output to output & (name of l) & "\\n"
+    end repeat
+    return output
+end tell''')
+    return [line.strip() for line in out.split("\n") if line.strip()]
 
 
 def _create_reminder(list_name: str, text: str) -> dict:
@@ -103,11 +122,53 @@ def _delete_reminder(list_name: str, rid: str) -> None:
     _find_and_act(list_name, rid, "delete r")
 
 
-@router.get("")
-def list_reminders() -> list[dict]:
+class SetListRequest(BaseModel):
+    list: str
+
+
+@router.get("/health")
+def reminders_health() -> dict:
+    return {
+        "available": REMINDERS_AVAILABLE,
+        "list": _reminders_list,
+        "platform": platform.system(),
+    }
+
+
+@router.get("/lists")
+def get_lists() -> list[str]:
     _require_macos()
     try:
-        return _get_reminders(REMINDERS_LIST)
+        return _get_all_lists()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/list")
+def get_list() -> dict:
+    return {"list": _reminders_list}
+
+
+@router.post("/list")
+def set_list(payload: SetListRequest) -> dict:
+    global _reminders_list
+    name = payload.list.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="list name is required")
+    _require_macos()
+    try:
+        _ensure_list(name)
+        _reminders_list = name
+        return {"list": _reminders_list}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("")
+def list_reminders(include_completed: bool = False) -> list[dict]:
+    _require_macos()
+    try:
+        return _get_reminders(_reminders_list, include_completed=include_completed)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -119,7 +180,7 @@ def create_reminder(payload: CreateReminderRequest) -> dict:
     if not text:
         raise HTTPException(status_code=400, detail="text is required")
     try:
-        return _create_reminder(REMINDERS_LIST, text)
+        return _create_reminder(_reminders_list, text)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -129,7 +190,7 @@ def update_reminder(reminder_id: str, payload: UpdateReminderRequest) -> dict:
     _require_macos()
     try:
         if payload.done:
-            _complete_reminder(REMINDERS_LIST, reminder_id)
+            _complete_reminder(_reminders_list, reminder_id)
         return {"ok": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -139,7 +200,7 @@ def update_reminder(reminder_id: str, payload: UpdateReminderRequest) -> dict:
 def delete_reminder(reminder_id: str) -> dict:
     _require_macos()
     try:
-        _delete_reminder(REMINDERS_LIST, reminder_id)
+        _delete_reminder(_reminders_list, reminder_id)
         return {"ok": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
