@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from backend.api import service
 from backend.config import DEFAULT_KEYWORDS, SCORING_WEIGHTS, settings
 
+_WEIGHT_KEYS = frozenset(SCORING_WEIGHTS.keys())
+
 router = APIRouter(prefix="/api")
 
 
@@ -119,14 +121,20 @@ async def search_now(payload: SearchNowRequest) -> dict:
         raise HTTPException(status_code=400, detail="Unsupported analysis model provider")
     if payload.briefModelProvider not in {"gpt", "claude"}:
         raise HTTPException(status_code=400, detail="Unsupported brief model provider")
-    return await service.run_on_demand_search(
-        enabled_sources=selected_sources,
-        time_window=payload.timeWindow,
-        analysis_model_provider=payload.analysisModelProvider,
-        brief_model_provider=payload.briefModelProvider,
-        region_code=payload.regionCode,
-        check_for_channel_fit=payload.checkForChannelFit,
-    )
+    allowed_regions = {"JP", "US", "GB", "IN", "DE", "FR"}
+    if payload.regionCode not in allowed_regions:
+        raise HTTPException(status_code=400, detail=f"Unsupported region code: {payload.regionCode}")
+    try:
+        return await service.run_on_demand_search(
+            enabled_sources=selected_sources,
+            time_window=payload.timeWindow,
+            analysis_model_provider=payload.analysisModelProvider,
+            brief_model_provider=payload.briefModelProvider,
+            region_code=payload.regionCode,
+            check_for_channel_fit=payload.checkForChannelFit,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {e}")
 
 
 @router.post("/approve-topic/{row_id}")
@@ -167,7 +175,7 @@ def sources() -> list[dict]:
 def app_settings() -> dict:
     return {
         "keywords": service.get_keywords(),
-        "scoringWeights": SCORING_WEIGHTS,
+        "scoringWeights": service.get_scoring_weights(),
         "channelId": settings.youtube_channel_id or "",
         "modelProvider": settings.model_provider,
         "analysisModelProvider": settings.analysis_model_provider,
@@ -180,6 +188,20 @@ def app_settings() -> dict:
             "openai": bool(settings.openai_api_key),
         },
     }
+
+
+class ScoringWeightsRequest(BaseModel):
+    weights: dict[str, int]
+
+
+@router.post("/scoring-weights")
+def update_scoring_weights(payload: ScoringWeightsRequest) -> dict:
+    if set(payload.weights.keys()) != _WEIGHT_KEYS:
+        raise HTTPException(status_code=400, detail=f"Expected exactly these keys: {sorted(_WEIGHT_KEYS)}")
+    if not all(isinstance(v, int) and v >= 0 for v in payload.weights.values()):
+        raise HTTPException(status_code=400, detail="All weight values must be non-negative integers")
+    updated = service.set_scoring_weights(payload.weights)
+    return {"scoringWeights": updated}
 
 
 class UpdateKeywordsRequest(BaseModel):

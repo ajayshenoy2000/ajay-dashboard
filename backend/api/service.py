@@ -8,7 +8,7 @@ from backend.collectors.google_news import collect_google_news
 from backend.collectors.google_trends import collect_google_trends
 from backend.collectors.x import collect_x_posts
 from backend.collectors.youtube import collect_youtube_history
-from backend.config import DEFAULT_KEYWORDS, settings
+from backend.config import DEFAULT_KEYWORDS, SCORING_WEIGHTS, settings
 from backend.db.models import Trend, VideoBrief
 from backend.db.supabase_client import get_client
 from backend.llm.analysis import enrich_trends_with_analysis
@@ -24,6 +24,7 @@ from backend.sample_data import sample_briefs, sample_trends
 _user_keywords: list[str] | None = None
 _custom_keywords: list[str] | None = None
 _use_custom_keywords_only: bool = False
+_scoring_weights: dict | None = None
 
 TIME_WINDOWS = {
     "12h": 12,
@@ -101,6 +102,16 @@ def set_region_code(region_code: str) -> None:
     _current_region_code = region_code
 
 
+def get_scoring_weights() -> dict:
+    return _scoring_weights or SCORING_WEIGHTS
+
+
+def set_scoring_weights(weights: dict) -> dict:
+    global _scoring_weights
+    _scoring_weights = weights
+    return _scoring_weights
+
+
 async def update_channel_baseline(channel_id: str) -> dict | None:
     """Compute and store channel baseline. Returns baseline dict or None if failed.
 
@@ -172,7 +183,7 @@ async def collect_and_rank_trends(
             reasons = rejection_reasons(text)
             if reasons:
                 continue
-            score = score_trend(keyword, sources, youtube_history, all_sources=items)
+            score = score_trend(keyword, sources, youtube_history, all_sources=items, weights=get_scoring_weights())
             trends.append(
                 Trend(
                     id=keyword.lower().replace(" ", "-"),
@@ -197,6 +208,12 @@ async def collect_and_rank_trends(
         "hours": hours if use_live_sources else None,
         "keywordsUsed": keywords_to_use,
         "xAvailable": bool(settings.x_bearer_token),
+        "sourcesAvailable": {
+            "x": bool(settings.x_bearer_token),
+            "google_news": True,
+            "google_trends": True,
+            "youtube": bool(settings.youtube_api_key),
+        },
     }
     ranked = sorted(trends, key=lambda trend: trend.score.total, reverse=True)
     if use_live_sources:

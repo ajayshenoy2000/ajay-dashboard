@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from math import log10
+from datetime import datetime, timezone
+from math import exp, log10
 
 from backend.config import SCORING_WEIGHTS
 from backend.db.models import ScoreBreakdown, SourceItem, YouTubeVideo
@@ -12,14 +13,26 @@ CONVERSION_TERMS = ["相談", "施術", "ダウンタイム", "副作用", "失�
 
 _CROSS_SOURCE_WEIGHTS = {"x": 0.35, "google_trends": 0.30, "google_news": 0.25, "youtube": 0.10}
 
+# Recency decay: half-life of 12h for Google News items within the time window
+_NEWS_HALFLIFE_HOURS = 12.0
+
 
 def _bounded(value: float, maximum: float) -> float:
     return max(0, min(maximum, value))
 
 
+def _keywords_related(k1: str, k2: str) -> bool:
+    """True if two keywords likely refer to the same topic (one is substring of the other)."""
+    return k1 == k2 or k1 in k2 or k2 in k1
+
+
 def cross_source_confidence(keyword: str, all_sources: list[SourceItem]) -> float:
-    """0.0–1.0: fraction of source-type weights present for this keyword."""
-    present = {item.source for item in all_sources if item.keyword == keyword}
+    """0.0–1.0: fraction of source-type weights present for this keyword.
+
+    Uses substring matching so expanded keyword variants (e.g. 'マンジャロ' vs
+    'マンジャロ 副作用') still corroborate each other across sources.
+    """
+    present = {item.source for item in all_sources if _keywords_related(item.keyword, keyword)}
     return sum(_CROSS_SOURCE_WEIGHTS.get(s, 0) for s in present)
 
 
@@ -49,7 +62,6 @@ def score_trend(
     text = " ".join([keyword] + [source.title + " " + source.text for source in sources])
     engagement = sum(source.engagement for source in sources)
     source_diversity = len({source.source for source in sources})
-    google_signal = sum(1 for source in sources if source.source in {"google_news", "google_trends"})
     related_youtube = [video for video in youtube_history if keyword.lower() in (video.title + video.description).lower()]
     if not related_youtube:
         category = classify_topic(text)
@@ -65,16 +77,30 @@ def score_trend(
 
     trend_momentum = _bounded(momentum_raw, active_weights["trend_momentum"])
 
+    # Google search demand: recency-weighted news + real trends signal (0-100) + rising bonus
+    now = datetime.now(timezone.utc)
+    news_items = [s for s in sources if s.source == "google_news"]
+    news_signal = (
+        sum(
+            exp(-0.693 * max(0, (now - s.published_at).total_seconds()) / (_NEWS_HALFLIFE_HOURS * 3600))
+            for s in news_items
+        )
+        / max(1, len(sources))
+    )
+    trends_items = [s for s in sources if s.source == "google_trends"]
+    trends_value = max((s.engagement for s in trends_items), default=0) / 100.0
+    rising_bonus = 0.15 if any(s.metadata.get("rising") for s in trends_items) else 0.0
     google_search_demand = _bounded(
-        (google_signal / max(1, len(sources)) + (1 if any(source.source == "google_trends" for source in sources) else 0.35))
-        / 1.6
-        * active_weights["google_search_demand"],
+        (news_signal * 0.4 + trends_value * 0.6 + rising_bonus) * active_weights["google_search_demand"],
         active_weights["google_search_demand"],
     )
+
     medical = medical_relevance(text) * active_weights["medical_relevance"]
+
+    # YouTube fit: use anomaly score (baseline-relative, recency-weighted) set by collect_youtube_history
+    total_anomaly = sum(min(max(0.0, v.anomaly_score), 2.0) for v in related_youtube)
     youtube_fit = _bounded(
-        (sum(video.views for video in related_youtube) / 50000 + len(related_youtube) * 0.15)
-        * active_weights["youtube_historical_fit"],
+        (total_anomaly / 4.0 + len(related_youtube) * 0.05) * active_weights["youtube_historical_fit"],
         active_weights["youtube_historical_fit"],
     )
     conversion = _bounded(

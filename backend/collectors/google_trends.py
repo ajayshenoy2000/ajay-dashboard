@@ -43,22 +43,27 @@ def collect_google_trends(keywords: list[str], hours: int = 24, region_code: str
 
     items: list[SourceItem] = []
     for keyword, data in related.items():
-        top = data.get("top") if data else None
-        if top is None:
+        if not data:
             continue
-        for _, row in top.head(5).iterrows():
-            query = str(row.get("query", keyword))
-            value = int(row.get("value", 0))
-            items.append(
-                SourceItem(
-                    id=sha1(f"google_trends:{keyword}:{query}".encode()).hexdigest(),
-                    source="google_trends",
-                    title=query,
-                    text=f"{keyword} related query: {query} during last {hours} hours",
-                    url=f"https://trends.google.com/trends/explore?geo=JP&q={keyword}&date={_trends_timeframe(hours).replace(' ', '%20')}",
-                    keyword=keyword,
-                    published_at=datetime.now(timezone.utc),
-                    engagement=value,
+        top = data.get("top")
+        rising = data.get("rising")
+        for df, is_rising in ((top, False), (rising, True)):
+            if df is None:
+                continue
+            for _, row in df.head(5).iterrows():
+                query = str(row.get("query", keyword))
+                value = int(row.get("value", 0))
+                items.append(
+                    SourceItem(
+                        id=sha1(f"google_trends:{keyword}:{query}:{'rising' if is_rising else 'top'}".encode()).hexdigest(),
+                        source="google_trends",
+                        title=query,
+                        text=f"{keyword} {'rising' if is_rising else 'top'} query: {query} during last {hours} hours",
+                        url=f"https://trends.google.com/trends/explore?geo=JP&q={keyword}&date={_trends_timeframe(hours).replace(' ', '%20')}",
+                        keyword=keyword,
+                        published_at=datetime.now(timezone.utc),
+                        engagement=value,
+                        metadata={"rising": is_rising},
+                    )
                 )
-            )
     return items

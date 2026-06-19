@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from backend.collectors._youtube_helpers import _videos_from_ids, _youtube_get
+from backend.config import settings
 from backend.db.models import YouTubeVideo
 from backend.processors.channel_profile import score_video_anomaly
 from backend.sample_data import sample_youtube
@@ -122,6 +123,10 @@ def collect_youtube_history(
             ]
         else:
             scored = [(video, 0) for video in videos]
+
+    # Propagate anomaly score onto each video so score_trend() can use it
+    for video, anomaly in scored:
+        video.anomaly_score = anomaly
 
     # Sort by anomaly score descending
     scored.sort(key=lambda x: x[1], reverse=True)

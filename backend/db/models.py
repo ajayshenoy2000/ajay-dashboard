@@ -50,6 +50,7 @@ class YouTubeVideo:
     avg_percentage_viewed: float | None = None
     subscribers_gained: int | None = None
     category: str = "美容医療全般"
+    anomaly_score: float = 0.0
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "YouTubeVideo":
@@ -67,6 +68,7 @@ class YouTubeVideo:
             avg_percentage_viewed=data.get("avgPercentageViewed"),
             subscribers_gained=data.get("subscribersGained"),
             category=data.get("category", "美容医療全般"),
+            anomaly_score=data.get("anomalyScore", 0.0),
         )
 
 
@@ -171,9 +173,14 @@ class Trend:
                     "avgPercentageViewed": video.avg_percentage_viewed,
                     "subscribersGained": video.subscribers_gained,
                     "category": video.category,
+                    "anomalyScore": round(video.anomaly_score, 4),
                 }
                 for video in self.youtube_history
             ],
+            "sourceBreakdown": {
+                source_type: sum(1 for s in self.sources if s.source == source_type)
+                for source_type in ("x", "google_news", "google_trends", "youtube")
+            },
             "status": self.status,
             "whyItMatters": self.why_it_matters,
             "safetyNotes": self.safety_notes,
