@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.api.reminders import router as reminders_router
 from backend.api.routes import router
 from backend.config import settings
 from backend.db.database import init_db
@@ -34,3 +35,4 @@ def startup() -> None:
 
 
 app.include_router(router)
+app.include_router(reminders_router)

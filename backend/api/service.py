@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -100,10 +101,13 @@ def set_region_code(region_code: str) -> None:
     _current_region_code = region_code
 
 
-def update_channel_baseline(channel_id: str) -> dict | None:
-    """Compute and store channel baseline. Returns baseline dict or None if failed."""
+async def update_channel_baseline(channel_id: str) -> dict | None:
+    """Compute and store channel baseline. Returns baseline dict or None if failed.
+
+    compute_channel_baseline makes 9+ sequential YouTube API calls; run it in a
+    worker thread so it doesn't block the event loop for other requests."""
     global _channel_baseline
-    baseline = compute_channel_baseline(channel_id)
+    baseline = await asyncio.to_thread(compute_channel_baseline, channel_id)
     _channel_baseline = baseline
     return baseline
 
@@ -113,7 +117,7 @@ def get_channel_baseline() -> dict | None:
     return _channel_baseline
 
 
-def collect_and_rank_trends(
+async def collect_and_rank_trends(
     use_live_sources: bool = False,
     enabled_sources: list[str] | None = None,
     time_window: str = "24h",
@@ -140,18 +144,19 @@ def collect_and_rank_trends(
         trends = list(sample_trends)
         _last_sources = [source for trend in trends for source in trend.sources]
     else:
-        keywords_to_use = expand_keywords(keywords_to_use, analysis_model)
+        keywords_to_use = await asyncio.to_thread(expand_keywords, keywords_to_use, analysis_model)
         items = []
         if "x" in sources_to_use:
-            x_raw = collect_x_posts(keywords_to_use, hours=hours, region_code=region_to_use)
-            items.extend(classify_and_filter(x_raw))
+            x_raw = await collect_x_posts(keywords_to_use, hours=hours, region_code=region_to_use)
+            items.extend(await asyncio.to_thread(classify_and_filter, x_raw))
         if "google_news" in sources_to_use:
-            items.extend(collect_google_news(keywords_to_use, hours=hours, region_code=region_to_use))
+            items.extend(await asyncio.to_thread(collect_google_news, keywords_to_use, hours=hours, region_code=region_to_use))
         if "google_trends" in sources_to_use:
-            items.extend(collect_google_trends(keywords_to_use, hours=hours, region_code=region_to_use))
+            items.extend(await asyncio.to_thread(collect_google_trends, keywords_to_use, hours=hours, region_code=region_to_use))
 
         youtube_history = (
-            collect_youtube_history(
+            await asyncio.to_thread(
+                collect_youtube_history,
                 keywords=keywords_to_use,
                 hours=hours,
                 channel_baseline=_channel_baseline if check_for_channel_fit else None,
@@ -198,7 +203,7 @@ def collect_and_rank_trends(
         # Analysis model rewrites title / summary / why_it_matters for the
         # top trends; the template text above is kept when the provider is
         # mock/unavailable.
-        enrich_trends_with_analysis(ranked, analysis_model)
+        await asyncio.to_thread(enrich_trends_with_analysis, ranked, analysis_model)
 
     if not use_live_sources:
         for trend in ranked:
@@ -256,7 +261,7 @@ def _attach_brief_flags(client, trends: list[Trend]) -> None:
         trend.has_brief = trend.row_id in have_brief
 
 
-def run_on_demand_search(
+async def run_on_demand_search(
     enabled_sources: list[str],
     time_window: str,
     analysis_model_provider: str,
@@ -264,7 +269,7 @@ def run_on_demand_search(
     region_code: str | None = None,
     check_for_channel_fit: bool = False,
 ) -> dict[str, Any]:
-    ranked = collect_and_rank_trends(
+    ranked = await collect_and_rank_trends(
         use_live_sources=True,
         enabled_sources=enabled_sources,
         time_window=time_window,
@@ -292,7 +297,7 @@ def get_top_trends(limit: int = 20) -> list[Trend]:
         _attach_brief_flags(client, trends)
         return sorted(trends, key=lambda trend: trend.score.total, reverse=True)[:limit]
 
-    trends = _memory_trends if _memory_trends else collect_and_rank_trends()
+    trends = _memory_trends if _memory_trends else list(sample_trends)
     return sorted(trends, key=lambda trend: trend.score.total, reverse=True)[:limit]
 
 

@@ -47,7 +47,7 @@ def complete(provider: str, system: str, prompt: str, max_tokens: int = 4096) ->
 def _complete_claude(system: str, prompt: str, max_tokens: int) -> str:
     import anthropic
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=45.0)
     response = client.messages.create(
         model=ANTHROPIC_MODEL,
         max_tokens=max_tokens,
@@ -60,7 +60,7 @@ def _complete_claude(system: str, prompt: str, max_tokens: int) -> str:
 def _complete_gpt(system: str, prompt: str, max_tokens: int) -> str:
     from openai import OpenAI
 
-    client = OpenAI(api_key=settings.openai_api_key)
+    client = OpenAI(api_key=settings.openai_api_key, timeout=45.0)
     response = client.chat.completions.create(
         model=OPENAI_MODEL,
         max_completion_tokens=max_tokens,

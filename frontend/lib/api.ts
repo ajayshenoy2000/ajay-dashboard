@@ -18,6 +18,24 @@ async function getJson<T>(path: string, fallback: T): Promise<T> {
   }
 }
 
+// Slow-changing data (settings, sources) doesn't need to be re-fetched on
+// every navigation — short revalidation windows cut redundant backend calls
+// without staling out mutation flows (POSTs aren't cached by this).
+async function getJsonRevalidated<T>(path: string, fallback: T, revalidateSeconds: number): Promise<T> {
+  try {
+    const response = await fetch(`${API_BASE}${path}`, { next: { revalidate: revalidateSeconds } });
+    if (!response.ok) {
+      console.warn(`API request failed: ${path} (${response.status})`);
+      return fallback;
+    }
+    const data = await response.json();
+    return data as T;
+  } catch (error) {
+    console.warn(`API request error: ${path}`, error);
+    return fallback;
+  }
+}
+
 export function getTopTrends() {
   return getJson<Trend[]>("/api/top-trends", sampleTrends);
 }
@@ -48,11 +66,11 @@ export function getBriefs() {
 }
 
 export function getSources() {
-  return getJson<SourceItem[]>("/api/sources", sampleSources);
+  return getJsonRevalidated<SourceItem[]>("/api/sources", sampleSources, 60);
 }
 
 export function getSettings() {
-  return getJson<AppSettings>("/api/settings", {
+  return getJsonRevalidated<AppSettings>("/api/settings", {
     keywords: ["二重整形", "埋没", "クマ取り", "美容医療", "涙袋", "ヒアルロン酸", "ボトックス", "マンジャロ", "GLP-1"],
     scoringWeights: {
       trend_momentum: 25,
@@ -79,7 +97,7 @@ export function getSettings() {
       anthropic: false,
       openai: false
     }
-  });
+  }, 30);
 }
 
 export async function searchNow(payload: SearchNowRequest): Promise<SearchNowResponse> {
@@ -189,4 +207,54 @@ export async function setRegionCode(regionCode: string): Promise<{ regionCode: s
     throw new Error(message || "Region update failed");
   }
   return (await response.json()) as { regionCode: string };
+}
+
+export interface Reminder {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export async function getReminders(): Promise<{ reminders: Reminder[]; available: boolean }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/reminders`, { cache: "no-store" });
+    if (response.status === 503) return { reminders: [], available: false };
+    if (!response.ok) return { reminders: [], available: true };
+    return { reminders: (await response.json()) as Reminder[], available: true };
+  } catch {
+    return { reminders: [], available: true };
+  }
+}
+
+export async function createReminder(text: string): Promise<Reminder> {
+  const response = await fetch(`${API_BASE}/api/reminders`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text })
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Failed to create reminder");
+  }
+  return (await response.json()) as Reminder;
+}
+
+export async function completeReminder(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/reminders/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ done: true })
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Failed to complete reminder");
+  }
+}
+
+export async function deleteReminder(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/reminders/${id}`, { method: "DELETE" });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Failed to delete reminder");
+  }
 }

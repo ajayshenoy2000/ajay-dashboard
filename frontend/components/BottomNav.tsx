@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, FileText, Home, Settings, Sparkles } from "lucide-react";
+import { BarChart2, CalendarClock, FileText, Home, Settings, Sparkles } from "lucide-react";
 
-const LEFT_TABS = [
+type Tab = { href: string; label: string; icon: React.ElementType; isActive: (p: string) => boolean };
+
+// Trend Engine context: /trends*, /briefs*, /sources, /settings
+const TREND_ENGINE_LEFT: Tab[] = [
   {
     href: "/trends",
     label: "Discover",
@@ -15,11 +18,11 @@ const LEFT_TABS = [
     href: "/trends/history",
     label: "Trends",
     icon: BarChart2,
-    isActive: (p: string) => p.startsWith("/trends/history") || p.startsWith("/trends/sources") || p.startsWith("/sources"),
+    isActive: (p: string) => p.startsWith("/trends/history") || p.startsWith("/sources"),
   },
 ];
 
-const RIGHT_TABS = [
+const TREND_ENGINE_RIGHT: Tab[] = [
   {
     href: "/briefs",
     label: "Briefs",
@@ -34,17 +37,44 @@ const RIGHT_TABS = [
   },
 ];
 
+// Dashboard context: /, /schedule, /calendar-app — kept to a single tab on
+// each side so the row stays odd-numbered/symmetric around the Home button.
+const DASHBOARD_LEFT: Tab[] = [
+  {
+    href: "/schedule",
+    label: "Schedule",
+    icon: CalendarClock,
+    isActive: (p: string) => p.startsWith("/schedule"),
+  },
+];
+
+const DASHBOARD_RIGHT: Tab[] = [
+  {
+    href: "/trends",
+    label: "Trends",
+    icon: Sparkles,
+    isActive: (p: string) => p.startsWith("/trends") || p.startsWith("/briefs") || p.startsWith("/sources") || p.startsWith("/settings"),
+  },
+];
+
+function isDashboardContext(pathname: string): boolean {
+  return pathname === "/" || pathname.startsWith("/schedule") || pathname.startsWith("/calendar-app");
+}
+
 export function BottomNav() {
   const pathname = usePathname();
+  const dashboardContext = isDashboardContext(pathname);
+  const leftTabs = dashboardContext ? DASHBOARD_LEFT : TREND_ENGINE_LEFT;
+  const rightTabs = dashboardContext ? DASHBOARD_RIGHT : TREND_ENGINE_RIGHT;
 
   return (
     <nav className="fixed inset-x-3 bottom-3 z-50">
       <div className="mx-auto max-w-lg">
         <div className="relative flex h-[62px] items-center rounded-2xl border border-ink/8 bg-white/96 px-2 shadow-[0_8px_32px_rgba(24,33,31,0.14)] backdrop-blur-md">
 
-          {/* Left: Discover + Trends */}
+          {/* Left tab(s) */}
           <div className="flex flex-1 items-center justify-around">
-            {LEFT_TABS.map((tab) => (
+            {leftTabs.map((tab) => (
               <NavTab key={tab.href} tab={tab} active={tab.isActive(pathname)} />
             ))}
           </div>
@@ -63,9 +93,9 @@ export function BottomNav() {
             <div className="pointer-events-none absolute inset-x-[-4px] bottom-[-6px] h-3 bg-white/96" />
           </div>
 
-          {/* Right: Briefs + Settings */}
+          {/* Right tab(s) */}
           <div className="flex flex-1 items-center justify-around">
-            {RIGHT_TABS.map((tab) => (
+            {rightTabs.map((tab) => (
               <NavTab key={tab.href} tab={tab} active={tab.isActive(pathname)} />
             ))}
           </div>

@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  Briefcase, Calendar, CalendarClock, CheckCircle2,
+  Bell, Briefcase, Calendar, CalendarClock, CheckCircle2,
   Clock, ListChecks, Plus, Sparkles, Sun, X,
 } from "lucide-react";
 import { fetchWeekSchedule, type WeekDay } from "@/lib/schedule";
+import { completeReminder, createReminder, deleteReminder, getReminders, type Reminder } from "@/lib/api";
 
 interface Todo { id: string; text: string }
 
@@ -30,6 +31,9 @@ export default function DashboardPage() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [reminderInput, setReminderInput] = useState("");
+  const [remindersUnavailable, setRemindersUnavailable] = useState(false);
 
   useEffect(() => {
     function tick() {
@@ -47,6 +51,39 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchWeekSchedule().then(setWork).catch(() => {}); }, []);
   useEffect(() => { setTodos(loadTodos()); }, []);
+  useEffect(() => {
+    getReminders().then(({ reminders, available }) => {
+      setReminders(reminders);
+      setRemindersUnavailable(!available);
+    });
+  }, []);
+
+  async function addReminder() {
+    const text = reminderInput.trim();
+    if (!text) return;
+    try {
+      const created = await createReminder(text);
+      setReminders((prev) => [...prev, created]);
+      setReminderInput("");
+      setRemindersUnavailable(false);
+    } catch {
+      setRemindersUnavailable(true);
+    }
+  }
+
+  async function checkOffReminder(id: string) {
+    setReminders((prev) => prev.filter((r) => r.id !== id));
+    try {
+      await completeReminder(id);
+    } catch { /* already removed optimistically */ }
+  }
+
+  async function removeReminder(id: string) {
+    setReminders((prev) => prev.filter((r) => r.id !== id));
+    try {
+      await deleteReminder(id);
+    } catch { /* already removed optimistically */ }
+  }
 
   function addTodo() {
     const text = input.trim();
@@ -195,6 +232,50 @@ export default function DashboardPage() {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+      </section>
+
+      {/* Reminders — synced with Apple Reminders via backend (macOS/local-dev only) */}
+      <section className="mt-4">
+        <h2 className="mb-3 flex items-center gap-2 text-base font-bold">
+          <Bell className="h-4 w-4 text-coral" /> Reminders
+        </h2>
+        <div className="rounded-2xl border border-ink/10 bg-white p-4 shadow-soft">
+          {remindersUnavailable ? (
+            <p className="py-3 text-center text-sm text-ink/35">
+              Apple Reminders sync isn&apos;t available here (macOS-only, local dev).
+            </p>
+          ) : (
+            <>
+              <div className="mb-3 flex gap-2">
+                <input
+                  value={reminderInput}
+                  onChange={(e) => setReminderInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addReminder()}
+                  placeholder="Add a reminder…"
+                  className="min-w-0 flex-1 rounded-xl border border-ink/12 bg-mist px-3 py-2.5 text-sm outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+                />
+                <button onClick={addReminder} className="cursor-pointer rounded-xl bg-coral px-4 py-2.5 text-sm font-bold text-white transition hover:bg-coral/85 active:scale-95">
+                  Add
+                </button>
+              </div>
+              {reminders.length === 0 ? (
+                <p className="py-3 text-center text-sm text-ink/35">No reminders — add one above!</p>
+              ) : (
+                <ul className="space-y-1">
+                  {reminders.map((reminder) => (
+                    <li key={reminder.id} className="group flex items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-mist">
+                      <input type="checkbox" className="h-4 w-4 shrink-0 cursor-pointer accent-coral" onChange={() => checkOffReminder(reminder.id)} />
+                      <span className="flex-1 text-sm">{reminder.text}</span>
+                      <button onClick={() => removeReminder(reminder.id)} className="shrink-0 cursor-pointer text-ink/20 opacity-0 transition group-hover:opacity-100 hover:text-coral">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
         </div>
       </section>

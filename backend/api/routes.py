@@ -108,7 +108,7 @@ def generate_brief(payload: BriefRequest) -> dict:
 
 
 @router.post("/search-now")
-def search_now(payload: SearchNowRequest) -> dict:
+async def search_now(payload: SearchNowRequest) -> dict:
     allowed_sources = {"x", "google_news", "google_trends", "youtube"}
     selected_sources = [source for source in payload.sources if source in allowed_sources]
     if not selected_sources:
@@ -119,7 +119,7 @@ def search_now(payload: SearchNowRequest) -> dict:
         raise HTTPException(status_code=400, detail="Unsupported analysis model provider")
     if payload.briefModelProvider not in {"gpt", "claude"}:
         raise HTTPException(status_code=400, detail="Unsupported brief model provider")
-    return service.run_on_demand_search(
+    return await service.run_on_demand_search(
         enabled_sources=selected_sources,
         time_window=payload.timeWindow,
         analysis_model_provider=payload.analysisModelProvider,
@@ -211,12 +211,14 @@ def get_custom_keywords() -> dict:
 
 
 @router.post("/update-channel-id")
-def update_channel_id(payload: UpdateChannelIdRequest) -> dict:
-    """Compute and store channel baseline. Runs synchronously (blocks)."""
+async def update_channel_id(payload: UpdateChannelIdRequest) -> dict:
+    """Compute and store channel baseline. Runs in a worker thread so it
+    doesn't block the event loop (the YouTube API calls inside can take
+    up to ~30-60s)."""
     if not payload.channelId or not payload.channelId.strip():
         raise HTTPException(status_code=400, detail="Channel ID must be non-empty")
     try:
-        baseline = service.update_channel_baseline(payload.channelId)
+        baseline = await service.update_channel_baseline(payload.channelId)
         if not baseline:
             raise HTTPException(status_code=400, detail="Failed to fetch channel data (invalid channel or API error)")
         return {

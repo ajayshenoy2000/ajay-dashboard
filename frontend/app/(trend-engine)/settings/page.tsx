@@ -117,7 +117,16 @@ export default function SettingsPage() {
     }
   };
 
-  if (!settings) return <div>Loading...</div>;
+  if (!settings) {
+    return (
+      <div className="space-y-5">
+        <div className="h-9 w-40 animate-pulse rounded-lg bg-ink/8" />
+        <div className="h-48 animate-pulse rounded-md bg-ink/8" />
+        <div className="h-40 animate-pulse rounded-md bg-ink/8" />
+        <div className="h-32 animate-pulse rounded-md bg-ink/8" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -203,6 +212,9 @@ export default function SettingsPage() {
               {updatingChannel ? "Analyzing..." : "Update"}
             </button>
           </div>
+          {updatingChannel && (
+            <p className="mt-3 text-sm text-ink/50">Analyzing channel… this can take up to 30–60 seconds.</p>
+          )}
           {channelError && <p className="mt-3 text-sm text-coral">{channelError}</p>}
           {channelSuccess && <p className="mt-3 text-sm font-bold text-sage">Channel profile updated successfully!</p>}
         </section>
