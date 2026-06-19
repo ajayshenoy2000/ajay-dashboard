@@ -2,7 +2,7 @@ import { TrendsSubNav } from "@/components/TrendsSubNav";
 import { TrendFilter } from "@/components/TrendFilter";
 import { getTrendHistory } from "@/lib/api";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function HistoryPage() {
   const trends = await getTrendHistory();

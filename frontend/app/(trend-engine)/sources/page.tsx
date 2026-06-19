@@ -2,7 +2,7 @@ import { TrendsSubNav } from "@/components/TrendsSubNav";
 import { SourceFeed } from "@/components/SourceFeed";
 import { getSources } from "@/lib/api";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function SourcesPage() {
   const sources = await getSources();

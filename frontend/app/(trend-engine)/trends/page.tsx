@@ -4,7 +4,7 @@ import { TrendCard } from "@/components/TrendCard";
 import { TrendFilter } from "@/components/TrendFilter";
 import { getTopTrends, getRecordThisWeek, getSettings } from "@/lib/api";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function DiscoverPage() {
   const [trends, recordTopics, settings] = await Promise.all([
