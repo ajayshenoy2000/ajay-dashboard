@@ -1,80 +1,114 @@
-# AJay's Personal Assistant Dashboard
+# Ajay Dashboard
 
-A lightweight, mobile-first dashboard hub for your apps and daily workflow. Built with vanilla HTML, CSS, and JavaScript.
+Personal dashboard hub deployed at **[ajay.my](https://ajay.my)**. A mobile-first launcher
+for a growing set of self-contained "sub-apps" — work schedule, calendar, and the
+**Trend Engine** trend-intelligence tool — with more on the way.
 
-## Features
+## Architecture
 
-- **Personalized Greeting** — Time-aware greeting (Good morning/afternoon/evening, AJay)
-- **Quick Stats** — Task counter and current time at a glance
-- **Today's Schedule** — Display your daily events and meetings
-- **App Launcher** — Quick access to your apps (Beauty Trends linked, expandable for more)
-- **Task Management** — Add, complete, and delete tasks with local persistence
-- **Premium Design** — Off-white + chalky orange theme with light/dark mode support
-- **Mobile-First** — Fully responsive design optimized for all screen sizes
-- **Zero Dependencies** — Pure vanilla JavaScript, no build process needed
+A monorepo with two independently deployed halves:
 
-## Quick Start
+| Part | Stack | Deploys to |
+|------|-------|------------|
+| `frontend/` | Next.js 14 (App Router), React 18, TypeScript, Tailwind, lucide-react, Poppins | **Vercel** → ajay.my |
+| `backend/`  | FastAPI (Python 3.11), SQLite / Supabase, scheduled collectors | **Fly.io** (`lor-idea-engine`, region `nrt`/Tokyo) via Docker |
 
-1. Open `index.html` in your browser
-2. Start adding tasks using the input field
-3. Check off tasks when complete
-4. Click "Beauty Trends" to access the LOR Trend Engine
+The frontend talks to the backend over HTTP (`NEXT_PUBLIC_API_BASE_URL`), and degrades
+gracefully to bundled sample data when the backend is unreachable (see `lib/api.ts`).
 
-## How It Works
+## Sub-app pattern
 
-- **Tasks** are saved to `localStorage` — they persist across sessions
-- **Schedule** can be customized by editing the `schedule` array in `script.js`
-- **Apps** are added as cards in the app grid — edit the `app-grid` section in `index.html`
+The dashboard is built so each tool is a self-contained sub-app. Adding one touches a
+predictable set of places — use **Trend Engine** as the reference implementation.
 
-## Customization
+### Frontend
 
-### Edit Your Schedule
-In `script.js`, modify the schedule array:
-```javascript
-const schedule = [
-    { time: '09:00', title: 'Team Standup', desc: 'Weekly sync' },
-    { time: '14:00', title: 'Review Session', desc: 'Project check-in' },
-];
-```
-
-### Add More Apps
-In `index.html`, add new app cards to the `.app-grid` section:
-```html
-<a href="https://your-app-url.com" target="_blank" class="app-card">
-    <div class="app-icon">⚙️</div>
-    <div class="app-name">Your App</div>
-    <div class="app-desc">Description</div>
-</a>
-```
-
-### Theme Colors
-Edit the CSS variables at the top of `style.css`:
-```css
-:root {
-    --off-white: #f9f7f4;
-    --orange: #ff9f1c;
-    /* ... more colors ... */
-}
-```
-
-## File Structure
+Routes live under `frontend/app/`, organized by **route group** (one per sub-app):
 
 ```
-ajay-dashboard/
-├── index.html       # Main dashboard markup
-├── style.css        # All styling (mobile-first)
-├── script.js        # Task management logic
-└── README.md        # This file
+app/
+├── layout.tsx                 # root layout — fonts, <BottomNav/>
+├── globals.css                # theme tokens (ink/coral/sage/gold/mist)
+├── (dashboard)/               # the launcher hub
+│   ├── layout.tsx
+│   ├── page.tsx               # home: greeting, schedule, "Your Apps" grid, reminders
+│   ├── schedule/
+│   └── calendar-app/
+└── (trend-engine)/            # the reference sub-app
+    ├── layout.tsx             # each group gets its own layout
+    ├── trends/                # /trends, /trends/history, /trends/[id]
+    ├── briefs/                # /briefs, /briefs/[id]
+    ├── sources/
+    └── settings/
 ```
 
-## Browser Support
+To add a sub-app on the frontend:
 
-Works on all modern browsers:
-- Chrome/Edge (latest)
-- Firefox (latest)
-- Safari (latest)
-- Mobile browsers
+1. **Create a route group** `app/(your-app)/` with its own `layout.tsx` + pages.
+2. **Add a nav context** in `components/BottomNav.tsx` — define its left/right tab sets
+   and extend the context detection so the bottom bar switches to them inside the app.
+3. **Surface it** as a card in the "Your Apps" grid on the home page
+   (`app/(dashboard)/page.tsx`) — there is an `Add App` placeholder slot to replace.
+4. **Wire data** — add types to `lib/types.ts` and fetchers to `lib/api.ts`
+   (all backend calls go through `API_BASE`, with a sample-data fallback).
 
-## Powered by Claude
+### Backend
 
-Built with ❤️ using Claude AI.
+The backend follows a clean pipeline, mirrored in its module layout:
+
+```
+backend/
+├── main.py                # FastAPI app; include_router() for each sub-app
+├── config.py              # Settings dataclass, env vars, default keywords/weights
+├── api/                   # routes.py (prefix /api), service.py, reminders.py
+├── collectors/            # data ingestion (x, youtube, google_news, google_trends)
+├── processors/            # clean → classify → cluster → score → safety filter
+├── llm/                   # providers, analysis, brief_generator
+├── db/                    # database.py, models.py, supabase_client.py
+└── scheduler/             # daily_collect.py, weekly_report.py
+```
+
+To add a sub-app on the backend: add `collectors/`/`processors`/`llm` modules as needed,
+expose a router (or extend `api/routes.py`), and `include_router(...)` it in `main.py`.
+New secrets go in the `Settings` dataclass in `config.py` and in `.env` / `.env.example`.
+
+## Local development
+
+**Backend** (from repo root):
+
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env          # fill in API keys; MODEL_PROVIDER=mock works offline
+cd .. && uvicorn backend.main:app --reload --port 8000
+```
+
+**Frontend** (separate terminal):
+
+```bash
+cd frontend
+npm install
+npm run dev                   # http://localhost:3000
+```
+
+Set `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000` in `frontend/.env.local` to point the
+UI at your local backend; without it, the UI falls back to sample data.
+
+## Deployment
+
+- **Frontend → Vercel.** Pushes to `main` deploy automatically. Set
+  `NEXT_PUBLIC_API_BASE_URL` to the Fly.io backend URL in the Vercel project env.
+- **Backend → Fly.io.** `fly deploy` builds `backend/Dockerfile` from the repo root
+  (`fly.toml` sets the build context). Secrets via `fly secrets set ...`.
+
+## Theme
+
+Design tokens are CSS variables in `frontend/app/globals.css` and `tailwind.config.ts`:
+off-white surfaces, `ink` (near-black text), `coral` (accent), plus `sage`, `gold`, `mist`.
+Mobile-first, Poppins type, soft shadows, rounded-2xl cards.
+
+---
+
+*Note: "Trend Engine" is internally titled the L'or Clinic Trend Intelligence API — it scores
+Japanese beauty trends and generates video briefs. The dashboard wraps it as one sub-app.*

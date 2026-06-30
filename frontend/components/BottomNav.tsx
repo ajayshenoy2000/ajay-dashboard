@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, CalendarClock, FileText, Home, Settings, Sparkles } from "lucide-react";
+import { BarChart2, CalendarClock, FileText, Home, LayoutGrid, Radar, Settings, Sparkles, Terminal } from "lucide-react";
 
 type Tab = { href: string; label: string; icon: React.ElementType; isActive: (p: string) => boolean };
 
@@ -37,6 +37,25 @@ const TREND_ENGINE_RIGHT: Tab[] = [
   },
 ];
 
+// MetaScraper context: /metascraper*
+const METASCRAPER_LEFT: Tab[] = [
+  {
+    href: "/metascraper",
+    label: "Console",
+    icon: Terminal,
+    isActive: (p: string) => p === "/metascraper",
+  },
+];
+
+const METASCRAPER_RIGHT: Tab[] = [
+  {
+    href: "/metascraper/dashboard",
+    label: "Recon",
+    icon: LayoutGrid,
+    isActive: (p: string) => p.startsWith("/metascraper/dashboard"),
+  },
+];
+
 // Dashboard context: /, /schedule, /calendar-app — kept to a single tab on
 // each side so the row stays odd-numbered/symmetric around the Home button.
 const DASHBOARD_LEFT: Tab[] = [
@@ -61,11 +80,24 @@ function isDashboardContext(pathname: string): boolean {
   return pathname === "/" || pathname.startsWith("/schedule") || pathname.startsWith("/calendar-app");
 }
 
+function isMetaScraperContext(pathname: string): boolean {
+  return pathname.startsWith("/metascraper");
+}
+
 export function BottomNav() {
   const pathname = usePathname();
   const dashboardContext = isDashboardContext(pathname);
-  const leftTabs = dashboardContext ? DASHBOARD_LEFT : TREND_ENGINE_LEFT;
-  const rightTabs = dashboardContext ? DASHBOARD_RIGHT : TREND_ENGINE_RIGHT;
+  const metaScraperContext = isMetaScraperContext(pathname);
+
+  let leftTabs = TREND_ENGINE_LEFT;
+  let rightTabs = TREND_ENGINE_RIGHT;
+  if (metaScraperContext) {
+    leftTabs = METASCRAPER_LEFT;
+    rightTabs = METASCRAPER_RIGHT;
+  } else if (dashboardContext) {
+    leftTabs = DASHBOARD_LEFT;
+    rightTabs = DASHBOARD_RIGHT;
+  }
 
   return (
     <nav className="fixed inset-x-3 bottom-3 z-50">

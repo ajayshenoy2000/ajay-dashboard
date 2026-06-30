@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Bell, Briefcase, Calendar, CalendarClock, CheckCircle2,
-  ChevronDown, Clock, Plus, Settings, Sparkles, Sun, X,
+  ChevronDown, Clock, Radar, Settings, Sparkles, Sun, X,
 } from "lucide-react";
 import { fetchWeekSchedule, shiftLabel, type WeekDay } from "@/lib/schedule";
 import {
@@ -308,11 +308,11 @@ export default function DashboardPage() {
             <div className="font-bold">Calendar</div>
             <div className="mt-0.5 text-xs text-ink/45">Live Google Calendar feed</div>
           </Link>
-          <div className="rounded-2xl border border-dashed border-ink/15 p-4 text-ink/25">
-            <Plus className="mb-3 h-6 w-6" />
-            <div className="font-semibold text-ink/35">Add App</div>
-            <div className="mt-0.5 text-xs">Coming soon</div>
-          </div>
+          <Link href="/metascraper" className="group cursor-pointer rounded-2xl bg-ink p-4 text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(24,33,31,0.22)]">
+            <Radar className="mb-3 h-6 w-6 text-gold transition-transform duration-200 group-hover:scale-110" />
+            <div className="font-bold">MetaScraper</div>
+            <div className="mt-0.5 text-xs text-white/50">Competitor Meta ad recon</div>
+          </Link>
         </div>
       </section>
 

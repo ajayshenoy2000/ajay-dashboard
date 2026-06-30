@@ -7,6 +7,7 @@ from backend.api.reminders import router as reminders_router
 from backend.api.routes import router
 from backend.config import settings
 from backend.db.database import init_db
+from backend.metascraper.routes import router as metascraper_router
 
 
 app = FastAPI(
@@ -36,3 +37,4 @@ def startup() -> None:
 
 app.include_router(router)
 app.include_router(reminders_router)
+app.include_router(metascraper_router)

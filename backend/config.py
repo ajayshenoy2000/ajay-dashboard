@@ -54,6 +54,10 @@ class Settings:
     cors_origin: str = os.getenv("CORS_ORIGIN", "http://localhost:3000")
     supabase_url: str | None = os.getenv("SUPABASE_URL")
     supabase_service_key: str | None = os.getenv("SUPABASE_SERVICE_KEY")
+    # MetaScraper sub-app
+    metascraper_ingest_token: str | None = os.getenv("METASCRAPER_INGEST_TOKEN")
+    metascraper_sheet_webhook_url: str | None = os.getenv("METASCRAPER_SHEET_WEBHOOK_URL")
+    metascraper_sheet_secret: str | None = os.getenv("METASCRAPER_SHEET_SECRET")
 
 
 settings = Settings()
