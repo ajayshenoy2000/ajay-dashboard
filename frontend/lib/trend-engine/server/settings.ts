@@ -26,14 +26,7 @@ export type TrendSettings = {
   lastSearchMeta: Record<string, unknown>;
 };
 
-// Module-level cache — valid for 5 min (warm invocations reuse this)
-let _cached: TrendSettings | null = null;
-let _cachedAt = 0;
-const CACHE_TTL = 5 * 60 * 1000;
-
 export async function loadSettings(): Promise<TrendSettings> {
-  if (_cached && Date.now() - _cachedAt < CACHE_TTL) return _cached;
-
   const db = getDb();
   if (!db) return defaultSettings();
 
@@ -44,7 +37,7 @@ export async function loadSettings(): Promise<TrendSettings> {
   }
 
   const row = data[0];
-  _cached = {
+  return {
     keywords: row.keywords?.length ? row.keywords : DEFAULT_KEYWORDS,
     customKeywords: row.custom_keywords?.length ? row.custom_keywords : null,
     useCustomOnly: Boolean(row.use_custom_only),
@@ -54,12 +47,9 @@ export async function loadSettings(): Promise<TrendSettings> {
     lastSources: (row.last_sources as unknown[] | null) ?? [],
     lastSearchMeta: row.last_search_meta ?? defaultSearchMeta(),
   };
-  _cachedAt = Date.now();
-  return _cached;
 }
 
 export async function saveSettings(patch: Partial<TrendSettings>): Promise<void> {
-  _cached = null; // invalidate cache
   const db = getDb();
   if (!db) return;
 
