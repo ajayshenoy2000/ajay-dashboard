@@ -46,9 +46,12 @@ export async function loadAds(): Promise<StoredAd[]> {
 export async function saveAds(ads: StoredAd[]): Promise<void> {
   const db = getDb();
   if (!db || ads.length === 0) return;
-  await db
-    .from(ADS_TABLE)
-    .upsert(ads.map((a) => ({ library_id: a.library_id, payload: a })));
+  const rows = ads.map((a) => ({ library_id: a.library_id, payload: a }));
+  // Batch in chunks of 50 to stay within PostgREST payload limits
+  for (let i = 0; i < rows.length; i += 50) {
+    const { error } = await db.from(ADS_TABLE).upsert(rows.slice(i, i + 50));
+    if (error) throw new Error(`metascraper_ads upsert: ${error.message} (code=${error.code})`);
+  }
 }
 
 export async function updateAd(ad: StoredAd): Promise<void> {
@@ -70,9 +73,10 @@ export async function recordCapture(
     ad_count: capture.ads.length,
     ...summary,
   };
-  await db
+  const { error } = await db
     .from(CAPTURES_TABLE)
     .upsert({ captured_date: capture.captured_date, payload });
+  if (error) throw new Error(`metascraper_captures upsert: ${error.message} (code=${error.code})`);
 }
 
 export async function listCaptures(): Promise<Record<string, unknown>[]> {
