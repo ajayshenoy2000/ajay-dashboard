@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Header } from "@/components/Header";
 import { useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
-import { API_BASE } from "@/lib/api-config";
 import { clearTrendHistory, updateChannelId } from "@/lib/api";
 
 interface Settings {
@@ -35,7 +34,7 @@ export default function SettingsPage() {
   const [channelSuccess, setChannelSuccess] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/settings`, { cache: "no-store" })
+    fetch("/api/settings", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         setSettings(data);
@@ -64,7 +63,7 @@ export default function SettingsPage() {
     setError(null);
     setSuccess(false);
     try {
-      const response = await fetch(`${API_BASE}/api/keywords`, {
+      const response = await fetch("/api/keywords", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keywords }),

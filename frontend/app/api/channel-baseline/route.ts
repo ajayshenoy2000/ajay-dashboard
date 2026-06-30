@@ -1,0 +1,10 @@
+import { NextResponse } from "next/server";
+import { getChannelBaseline } from "@/lib/trend-engine/server/service";
+
+export async function GET() {
+  try {
+    return NextResponse.json({ baseline: await getChannelBaseline() });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}

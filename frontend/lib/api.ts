@@ -1,35 +1,31 @@
-import { sampleBrief, sampleSources, sampleTrends } from "./sampleData";
+import { sampleBrief, sampleSources, sampleTrends } from "./trend-engine/server/sample-data";
 import type { AppSettings, Brief, SearchNowRequest, SearchNowResponse, SourceItem, Trend } from "./types";
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+// All Trend Engine routes are now Vercel API routes on the same origin.
+// No API_BASE prefix needed — relative paths work everywhere.
 
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
-    const response = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+    const response = await fetch(path, { cache: "no-store" });
     if (!response.ok) {
       console.warn(`API request failed: ${path} (${response.status})`);
       return fallback;
     }
-    const data = await response.json();
-    return data as T;
+    return (await response.json()) as T;
   } catch (error) {
     console.warn(`API request error: ${path}`, error);
     return fallback;
   }
 }
 
-// Slow-changing data (settings, sources) doesn't need to be re-fetched on
-// every navigation — short revalidation windows cut redundant backend calls
-// without staling out mutation flows (POSTs aren't cached by this).
 async function getJsonRevalidated<T>(path: string, fallback: T, revalidateSeconds: number): Promise<T> {
   try {
-    const response = await fetch(`${API_BASE}${path}`, { next: { revalidate: revalidateSeconds } });
+    const response = await fetch(path, { next: { revalidate: revalidateSeconds } });
     if (!response.ok) {
       console.warn(`API request failed: ${path} (${response.status})`);
       return fallback;
     }
-    const data = await response.json();
-    return data as T;
+    return (await response.json()) as T;
   } catch (error) {
     console.warn(`API request error: ${path}`, error);
     return fallback;
@@ -70,141 +66,114 @@ export function getSources() {
 }
 
 export function getSettings() {
-  return getJsonRevalidated<AppSettings>("/api/settings", {
-    keywords: ["二重整形", "埋没", "クマ取り", "美容医療", "涙袋", "ヒアルロン酸", "ボトックス", "マンジャロ", "GLP-1"],
-    scoringWeights: {
-      trend_momentum: 25,
-      google_search_demand: 20,
-      medical_relevance: 20,
-      youtube_historical_fit: 20,
-      conversion_potential: 10,
-      safety_brand_fit: 5
-    },
-    channelId: "",
-    modelProvider: "mock",
-    analysisModelProvider: "gpt",
-    briefModelProvider: "claude",
-    lastSearch: {
-      mode: "sample",
-      timeWindow: "sample",
-      sources: ["x", "google_news", "google_trends", "youtube"],
+  return getJsonRevalidated<AppSettings>(
+    "/api/settings",
+    {
+      keywords: ["二重整形", "埋没", "クマ取り", "美容医療", "涙袋", "ヒアルロン酸", "ボトックス", "マンジャロ", "GLP-1"],
+      scoringWeights: {
+        trend_momentum: 25,
+        google_search_demand: 20,
+        medical_relevance: 20,
+        youtube_historical_fit: 20,
+        conversion_potential: 10,
+        safety_brand_fit: 5,
+      },
+      channelId: "",
+      modelProvider: "mock",
       analysisModelProvider: "gpt",
-      briefModelProvider: "claude"
+      briefModelProvider: "claude",
+      lastSearch: {
+        mode: "sample",
+        timeWindow: "sample",
+        sources: ["x", "google_news", "google_trends", "youtube"],
+        analysisModelProvider: "gpt",
+        briefModelProvider: "claude",
+      },
+      apiKeys: { youtube: false, x: false, anthropic: false, openai: false },
     },
-    apiKeys: {
-      youtube: false,
-      x: false,
-      anthropic: false,
-      openai: false
-    }
-  }, 30);
+    30,
+  );
 }
 
 export async function searchNow(payload: SearchNowRequest): Promise<SearchNowResponse> {
-  const response = await fetch(`${API_BASE}/api/search-now`, {
+  const response = await fetch("/api/search-now", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "Search failed");
-  }
+  if (!response.ok) throw new Error((await response.text()) || "Search failed");
   return (await response.json()) as SearchNowResponse;
 }
 
 export async function generateBrief(rowId: string): Promise<Brief> {
-  const response = await fetch(`${API_BASE}/api/generate-brief`, {
+  const response = await fetch("/api/generate-brief", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ rowId })
+    body: JSON.stringify({ rowId }),
   });
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "Brief generation failed");
-  }
+  if (!response.ok) throw new Error((await response.text()) || "Brief generation failed");
   return (await response.json()) as Brief;
 }
 
 export async function deleteTrend(rowId: string): Promise<void> {
   if (!rowId) throw new Error("Trend ID is required");
-  const response = await fetch(`${API_BASE}/api/trends/${rowId}`, { method: "DELETE" });
-  if (!response.ok) {
-    const message = await response.text();
-    console.error("Delete trend error:", message);
-    throw new Error(message || "Failed to delete trend");
-  }
+  const response = await fetch(`/api/trends/${rowId}`, { method: "DELETE" });
+  if (!response.ok) throw new Error((await response.text()) || "Failed to delete trend");
 }
 
 export async function deleteBrief(briefId: string): Promise<void> {
   if (!briefId) throw new Error("Brief ID is required");
-  const response = await fetch(`${API_BASE}/api/briefs/${briefId}`, { method: "DELETE" });
-  if (!response.ok) {
-    const message = await response.text();
-    console.error("Delete brief error:", message);
-    throw new Error(message || "Failed to delete brief");
-  }
+  const response = await fetch(`/api/briefs/${briefId}`, { method: "DELETE" });
+  if (!response.ok) throw new Error((await response.text()) || "Failed to delete brief");
 }
 
 export async function clearTrendHistory(olderThanHours: number): Promise<{ deletedCount: number }> {
-  const response = await fetch(`${API_BASE}/api/clear-history`, {
+  const response = await fetch("/api/clear-history", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ olderThanHours })
+    body: JSON.stringify({ olderThanHours }),
   });
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "Clear history failed");
-  }
+  if (!response.ok) throw new Error((await response.text()) || "Clear history failed");
   return (await response.json()) as { deletedCount: number };
 }
 
 export async function setCustomKeywords(keywords: string[], useCustomOnly: boolean): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/custom-keywords`, {
+  const response = await fetch("/api/custom-keywords", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ keywords, useCustomOnly })
+    body: JSON.stringify({ keywords, useCustomOnly }),
   });
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "Failed to set custom keywords");
-  }
+  if (!response.ok) throw new Error((await response.text()) || "Failed to set custom keywords");
 }
 
 export async function getCustomKeywords(): Promise<{ customKeywords: string[] | null; useCustomOnly: boolean }> {
-  return getJson(`/api/custom-keywords`, { customKeywords: null, useCustomOnly: false });
+  return getJson("/api/custom-keywords", { customKeywords: null, useCustomOnly: false });
 }
 
-export async function updateChannelId(channelId: string): Promise<{ success: boolean; baseline: any }> {
-  const response = await fetch(`${API_BASE}/api/update-channel-id`, {
+export async function updateChannelId(channelId: string): Promise<{ success: boolean; baseline: unknown }> {
+  const response = await fetch("/api/update-channel-id", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ channelId })
+    body: JSON.stringify({ channelId }),
   });
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "Channel ID update failed");
-  }
-  return (await response.json()) as { success: boolean; baseline: any };
+  if (!response.ok) throw new Error((await response.text()) || "Channel ID update failed");
+  return (await response.json()) as { success: boolean; baseline: unknown };
 }
 
-export async function getChannelBaseline(): Promise<{ baseline: any }> {
-  return getJson(`/api/channel-baseline`, { baseline: null });
+export async function getChannelBaseline(): Promise<{ baseline: unknown }> {
+  return getJson("/api/channel-baseline", { baseline: null });
 }
 
 export async function getRegionCode(): Promise<{ regionCode: string }> {
-  return getJson(`/api/region-code`, { regionCode: "JP" });
+  return getJson("/api/region-code", { regionCode: "JP" });
 }
 
 export async function setRegionCode(regionCode: string): Promise<{ regionCode: string }> {
-  const response = await fetch(`${API_BASE}/api/region-code`, {
+  const response = await fetch("/api/region-code", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ regionCode })
+    body: JSON.stringify({ regionCode }),
   });
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "Region update failed");
-  }
+  if (!response.ok) throw new Error((await response.text()) || "Region update failed");
   return (await response.json()) as { regionCode: string };
 }
