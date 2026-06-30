@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { loadSettings, saveSettings } from "@/lib/trend-engine/server/settings";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const settings = await loadSettings();

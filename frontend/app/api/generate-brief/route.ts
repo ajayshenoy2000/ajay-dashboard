@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateAndSaveBrief } from "@/lib/trend-engine/server/service";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   try {
     const { rowId } = await req.json();

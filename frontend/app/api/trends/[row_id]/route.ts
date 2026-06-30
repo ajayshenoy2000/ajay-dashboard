@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTrend, deleteTrend, setTopicStatus } from "@/lib/trend-engine/server/service";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(_req: NextRequest, { params }: { params: { row_id: string } }) {
   try {
     const trend = await getTrend(params.row_id);

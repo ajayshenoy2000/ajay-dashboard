@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runSearch, TIME_WINDOWS } from "@/lib/trend-engine/server/service";
 
+export const dynamic = "force-dynamic";
+
 export const maxDuration = 60;
 
 const ALLOWED_REGIONS = new Set(["JP", "US", "GB", "IN", "DE", "FR"]);

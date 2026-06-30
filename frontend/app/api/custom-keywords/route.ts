@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCustomKeywords, setCustomKeywords } from "@/lib/trend-engine/server/service";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     return NextResponse.json(await getCustomKeywords());

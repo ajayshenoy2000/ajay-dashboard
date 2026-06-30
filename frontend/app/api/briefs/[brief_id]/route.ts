@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBrief, deleteBrief } from "@/lib/trend-engine/server/service";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(_req: NextRequest, { params }: { params: { brief_id: string } }) {
   try {
     const brief = await getBrief(params.brief_id);

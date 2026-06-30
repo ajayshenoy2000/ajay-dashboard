@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { patchAd } from "@/lib/metascraper/server/service";
 
+export const dynamic = "force-dynamic";
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { library_id: string } },

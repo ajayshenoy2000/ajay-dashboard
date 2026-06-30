@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/trend-engine/server/db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const db = getDb();
   let supabaseStatus = "not_configured";

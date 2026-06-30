@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestCapture } from "@/lib/metascraper/server/service";
 
+export const dynamic = "force-dynamic";
+
 function checkToken(req: NextRequest): boolean {
   const expected = process.env.METASCRAPER_INGEST_TOKEN;
   if (!expected) return true; // open when unset (local dev)
