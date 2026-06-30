@@ -10,6 +10,15 @@ import { getTrend } from "@/lib/trend-engine/server/service";
 export default async function TrendDetailPage({ params }: { params: { id: string } }) {
   const trend = await getTrend(params.id);
 
+  if (!trend) {
+    return (
+      <div>
+        <Header title="Trend" subtitle="" />
+        <p className="text-sm text-ink/50">Trend not found.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <Header title={trend.keyword} subtitle={trend.title} />
