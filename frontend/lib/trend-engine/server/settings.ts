@@ -64,7 +64,7 @@ export async function saveSettings(patch: Partial<TrendSettings>): Promise<void>
   if ("lastSearchMeta" in patch) row.last_search_meta = patch.lastSearchMeta;
 
   const { error } = await db.from("trend_settings").upsert(row);
-  if (error) console.error("trend_settings upsert:", error.message, error.code);
+  if (error) throw new Error(`trend_settings upsert failed: ${error.message} (code=${error.code})`);
 
 }
 
