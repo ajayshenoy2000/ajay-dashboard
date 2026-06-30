@@ -58,6 +58,11 @@ export function getHealth() {
   return getJson<Health | null>("/api/metascraper/health", null);
 }
 
+export async function getIngestToken(): Promise<string> {
+  const res = await getJson<{ token: string }>("/api/metascraper/token", { token: "" });
+  return res.token;
+}
+
 export function getCaptures() {
   return getJson<Capture[]>("/api/metascraper/captures", []);
 }

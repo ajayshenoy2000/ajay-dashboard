@@ -5,7 +5,7 @@ import {
   Check, ChevronDown, Clipboard, Copy, Plus, RotateCcw, Save, Terminal, Upload, X,
 } from "lucide-react";
 import { MetaHeader, MetaSubNav } from "@/components/metascraper/MetaSubNav";
-import { getConfig, importCapture, resetConfig, saveConfig } from "@/lib/metascraper/api";
+import { getConfig, getIngestToken, importCapture, resetConfig, saveConfig } from "@/lib/metascraper/api";
 import { buildHuntCommand } from "@/lib/metascraper/command";
 import type { AppConfig, Competitor, Niche, NicheMode } from "@/lib/metascraper/types";
 
@@ -33,7 +33,17 @@ export default function MetaScraperConsole() {
         setGroupLabels(res.groupLabels);
       }
     });
-    setIngestToken(localStorage.getItem(TOKEN_KEY) ?? "");
+    const stored = localStorage.getItem(TOKEN_KEY);
+    if (stored) {
+      setIngestToken(stored);
+    } else {
+      getIngestToken().then((t) => {
+        if (t) {
+          setIngestToken(t);
+          localStorage.setItem(TOKEN_KEY, t);
+        }
+      });
+    }
   }, []);
 
   const flash = useCallback((msg: string) => {
