@@ -27,7 +27,7 @@ export function SearchControls({ settings }: { settings: AppSettings }) {
   const router = useRouter();
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const [enabledSources, setEnabledSources] = useState<SearchSource[]>(["x", "google_news", "google_trends", "youtube"]);
+  const [enabledSources, setEnabledSources] = useState<SearchSource[]>(["google_news", "google_trends", "youtube"]);
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("24h");
   const [regionCode, setRegionCode] = useState("JP");
   const [analysisModelProvider, setAnalysisModelProvider] = useState<ModelProvider>(settings.analysisModelProvider ?? "gpt");
