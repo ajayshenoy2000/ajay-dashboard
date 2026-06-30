@@ -1,6 +1,6 @@
 import { Header } from "@/components/Header";
 import { BriefCard } from "@/components/BriefCard";
-import { getBriefs } from "@/lib/api";
+import { getBriefs } from "@/lib/trend-engine/server/service";
 
 export default async function BriefsPage() {
   const briefs = await getBriefs();

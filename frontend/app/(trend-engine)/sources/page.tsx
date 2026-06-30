@@ -1,6 +1,6 @@
 import { TrendsSubNav } from "@/components/TrendsSubNav";
 import { SourceFeed } from "@/components/SourceFeed";
-import { getSources } from "@/lib/api";
+import { getSources } from "@/lib/trend-engine/server/service";
 
 export const dynamic = "force-dynamic";
 

@@ -2,16 +2,18 @@ import { Activity, CalendarCheck, Film, TrendingUp } from "lucide-react";
 import { SearchControls } from "@/components/SearchControls";
 import { TrendCard } from "@/components/TrendCard";
 import { TrendFilter } from "@/components/TrendFilter";
-import { getTopTrends, getRecordThisWeek, getSettings } from "@/lib/api";
+import { getTopTrends, getRecordThisWeek, getAppSettings } from "@/lib/trend-engine/server/service";
+import type { AppSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function DiscoverPage() {
-  const [trends, recordTopics, settings] = await Promise.all([
+  const [trends, recordTopics, rawSettings] = await Promise.all([
     getTopTrends(),
     getRecordThisWeek(),
-    getSettings(),
+    getAppSettings(),
   ]);
+  const settings = rawSettings as unknown as AppSettings;
 
   const top = trends[0];
 

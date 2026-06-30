@@ -1,6 +1,6 @@
 import { TrendsSubNav } from "@/components/TrendsSubNav";
 import { TrendFilter } from "@/components/TrendFilter";
-import { getTrendHistory } from "@/lib/api";
+import { getTrendHistory } from "@/lib/trend-engine/server/service";
 
 export const dynamic = "force-dynamic";
 
