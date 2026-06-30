@@ -1,0 +1,57 @@
+{
+  "global": { "country": "JP", "platforms": ["FACEBOOK", "INSTAGRAM"], "media_type": "all", "capture_depth": 20 },
+  "niches": [
+    { "id": "bisei-seikei", "group": "surgical", "label_jp": "美容整形", "enabled": true,  "mode": "both", "keywords": ["美容整形"], "competitors": [] },
+    { "id": "futae",        "group": "surgical", "label_jp": "二重整形", "enabled": true,  "mode": "both", "keywords": ["二重整形", "埋没法"], "competitors": [] },
+    { "id": "memoto",       "group": "surgical", "label_jp": "目元整形", "enabled": true,  "mode": "both", "keywords": ["目元整形", "目の整形"], "competitors": [] },
+    { "id": "namidabukuro", "group": "surgical", "label_jp": "涙袋形成", "enabled": true,  "mode": "both", "keywords": ["涙袋形成", "涙袋"], "competitors": [] },
+    { "id": "gankenkasui",  "group": "surgical", "label_jp": "眼瞼下垂", "enabled": true,  "mode": "both", "keywords": ["眼瞼下垂"], "competitors": [] },
+    { "id": "kuma-tori",    "group": "surgical", "label_jp": "クマ取り", "enabled": true,  "mode": "both", "keywords": ["クマ取り", "目の下のクマ"], "competitors": [] },
+    { "id": "hana",         "group": "surgical", "label_jp": "鼻整形", "enabled": false, "mode": "both", "keywords": ["鼻整形"], "competitors": [] },
+    { "id": "houkyou",      "group": "surgical", "label_jp": "豊胸", "enabled": false, "mode": "both", "keywords": ["豊胸"], "competitors": [] },
+    { "id": "shibo-kyuuin", "group": "surgical", "label_jp": "脂肪吸引", "enabled": false, "mode": "both", "keywords": ["脂肪吸引"], "competitors": [] },
+    { "id": "kogao",        "group": "surgical", "label_jp": "小顔・輪郭形成", "enabled": false, "mode": "both", "keywords": ["小顔", "輪郭形成"], "competitors": [] },
+    { "id": "ito-lift",     "group": "surgical", "label_jp": "糸リフト", "enabled": false, "mode": "both", "keywords": ["糸リフト"], "competitors": [] },
+
+    { "id": "hyaluron",     "group": "injectable", "label_jp": "ヒアルロン酸", "enabled": false, "mode": "both", "keywords": ["ヒアルロン酸"], "competitors": [] },
+    { "id": "botox",        "group": "injectable", "label_jp": "ボトックス", "enabled": false, "mode": "both", "keywords": ["ボトックス"], "competitors": [] },
+    { "id": "shibo-yokai",  "group": "injectable", "label_jp": "脂肪溶解注射", "enabled": false, "mode": "both", "keywords": ["脂肪溶解注射"], "competitors": [] },
+    { "id": "biyo-tenteki", "group": "injectable", "label_jp": "美容点滴・美容注射", "enabled": false, "mode": "both", "keywords": ["美容点滴", "美容注射"], "competitors": [] },
+    { "id": "suikou",       "group": "injectable", "label_jp": "水光注射", "enabled": false, "mode": "both", "keywords": ["水光注射"], "competitors": [] },
+
+    { "id": "biyo-hifuka",  "group": "skin", "label_jp": "美容皮膚科", "enabled": true,  "mode": "both", "keywords": ["美容皮膚科"], "competitors": [] },
+    { "id": "shimi",        "group": "skin", "label_jp": "シミ取り", "enabled": false, "mode": "both", "keywords": ["シミ取り"], "competitors": [] },
+    { "id": "kanpan",       "group": "skin", "label_jp": "肝斑", "enabled": false, "mode": "both", "keywords": ["肝斑"], "competitors": [] },
+    { "id": "keana",        "group": "skin", "label_jp": "毛穴治療", "enabled": false, "mode": "both", "keywords": ["毛穴治療"], "competitors": [] },
+    { "id": "nikibi",       "group": "skin", "label_jp": "ニキビ・ニキビ跡", "enabled": false, "mode": "both", "keywords": ["ニキビ", "ニキビ跡"], "competitors": [] },
+    { "id": "tarumi",       "group": "skin", "label_jp": "たるみ治療", "enabled": false, "mode": "both", "keywords": ["たるみ治療"], "competitors": [] },
+    { "id": "hifu",         "group": "skin", "label_jp": "ハイフ(HIFU)", "enabled": false, "mode": "both", "keywords": ["ハイフ", "HIFU"], "competitors": [] },
+    { "id": "dermapen",     "group": "skin", "label_jp": "ダーマペン・ポテンツァ", "enabled": false, "mode": "both", "keywords": ["ダーマペン", "ポテンツァ"], "competitors": [] },
+    { "id": "pico",         "group": "skin", "label_jp": "ピコレーザー", "enabled": false, "mode": "both", "keywords": ["ピコレーザー"], "competitors": [] },
+    { "id": "photofacial",  "group": "skin", "label_jp": "フォトフェイシャル", "enabled": false, "mode": "both", "keywords": ["フォトフェイシャル"], "competitors": [] },
+    { "id": "peeling",      "group": "skin", "label_jp": "ピーリング", "enabled": false, "mode": "both", "keywords": ["ピーリング"], "competitors": [] },
+    { "id": "hokuro",       "group": "skin", "label_jp": "ほくろ除去", "enabled": false, "mode": "both", "keywords": ["ほくろ除去"], "competitors": [] },
+
+    { "id": "iryo-datsumo", "group": "hair_removal", "label_jp": "医療脱毛", "enabled": true,  "mode": "both", "keywords": ["医療脱毛"], "competitors": [] },
+    { "id": "zenshin",      "group": "hair_removal", "label_jp": "全身脱毛", "enabled": false, "mode": "both", "keywords": ["全身脱毛"], "competitors": [] },
+    { "id": "vio",          "group": "hair_removal", "label_jp": "VIO脱毛", "enabled": false, "mode": "both", "keywords": ["VIO脱毛"], "competitors": [] },
+    { "id": "mens-datsumo", "group": "hair_removal", "label_jp": "メンズ脱毛", "enabled": false, "mode": "both", "keywords": ["メンズ脱毛"], "competitors": [] },
+
+    { "id": "iryo-diet",    "group": "body", "label_jp": "医療ダイエット", "enabled": true,  "mode": "both", "keywords": ["医療ダイエット"], "competitors": [] },
+    { "id": "glp1",         "group": "body", "label_jp": "GLP-1ダイエット", "enabled": false, "mode": "both", "keywords": ["GLP-1", "GLP-1ダイエット"], "competitors": [] },
+    { "id": "shibo-reikyaku", "group": "body", "label_jp": "脂肪冷却", "enabled": false, "mode": "both", "keywords": ["脂肪冷却"], "competitors": [] },
+    { "id": "medical-diet", "group": "body", "label_jp": "メディカルダイエット", "enabled": false, "mode": "both", "keywords": ["メディカルダイエット"], "competitors": [] },
+
+    { "id": "aga",          "group": "hair_loss", "label_jp": "AGA(男性薄毛)", "enabled": false, "mode": "both", "keywords": ["AGA", "薄毛治療"], "competitors": [] },
+    { "id": "faga",         "group": "hair_loss", "label_jp": "FAGA(女性薄毛)", "enabled": false, "mode": "both", "keywords": ["FAGA", "女性薄毛"], "competitors": [] },
+    { "id": "shokumou",     "group": "hair_loss", "label_jp": "植毛", "enabled": false, "mode": "both", "keywords": ["植毛"], "competitors": [] },
+
+    { "id": "mens-biyo",    "group": "mens", "label_jp": "メンズ美容", "enabled": false, "mode": "both", "keywords": ["メンズ美容"], "competitors": [] },
+    { "id": "mens-seikei",  "group": "mens", "label_jp": "メンズ美容整形", "enabled": false, "mode": "both", "keywords": ["メンズ美容整形"], "competitors": [] },
+
+    { "id": "wakiga",       "group": "other", "label_jp": "わきが・多汗症(ミラドライ)", "enabled": false, "mode": "both", "keywords": ["わきが", "多汗症", "ミラドライ"], "competitors": [] },
+    { "id": "bihaku",       "group": "other", "label_jp": "美白", "enabled": false, "mode": "both", "keywords": ["美白"], "competitors": [] },
+    { "id": "anti-aging",   "group": "other", "label_jp": "アンチエイジング", "enabled": false, "mode": "both", "keywords": ["アンチエイジング"], "competitors": [] },
+    { "id": "iryo-pierce",  "group": "other", "label_jp": "医療ピアス", "enabled": false, "mode": "both", "keywords": ["医療ピアス"], "competitors": [] }
+  ]
+}

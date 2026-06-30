@@ -1,4 +1,3 @@
-import { API_BASE } from "../api";
 import type {
   AdRecord,
   AppConfig,
@@ -9,11 +8,12 @@ import type {
   Summary,
 } from "./types";
 
-export { API_BASE };
+// All MetaScraper routes are now served by Vercel API routes on the same origin.
+// No API_BASE prefix needed — relative paths work everywhere.
 
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
-    const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+    const res = await fetch(path, { cache: "no-store" });
     if (!res.ok) {
       console.warn(`MetaScraper API failed: ${path} (${res.status})`);
       return fallback;
@@ -30,7 +30,7 @@ export function getConfig() {
 }
 
 export async function saveConfig(config: AppConfig): Promise<AppConfig> {
-  const res = await fetch(`${API_BASE}/api/metascraper/config`, {
+  const res = await fetch("/api/metascraper/config", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ config }),
@@ -40,7 +40,7 @@ export async function saveConfig(config: AppConfig): Promise<AppConfig> {
 }
 
 export async function resetConfig(): Promise<AppConfig> {
-  const res = await fetch(`${API_BASE}/api/metascraper/config/reset`, { method: "POST" });
+  const res = await fetch("/api/metascraper/config/reset", { method: "POST" });
   if (!res.ok) throw new Error("Failed to reset config");
   return (await res.json()).config as AppConfig;
 }
@@ -65,9 +65,8 @@ export function getCaptures() {
   return getJson<Capture[]>("/api/metascraper/captures", []);
 }
 
-// Manual-import fallback: POST a capture JSON straight to the backend ingest.
 export async function importCapture(capture: unknown): Promise<unknown> {
-  const res = await fetch(`${API_BASE}/api/metascraper/capture`, {
+  const res = await fetch("/api/metascraper/capture", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(capture),
@@ -80,7 +79,7 @@ export async function patchAd(
   libraryId: string,
   patch: { hook_category?: string | null; notes?: string | null },
 ): Promise<AdRecord> {
-  const res = await fetch(`${API_BASE}/api/metascraper/ads/${libraryId}`, {
+  const res = await fetch(`/api/metascraper/ads/${libraryId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),

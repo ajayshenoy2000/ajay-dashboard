@@ -5,7 +5,7 @@ import {
   Check, ChevronDown, Clipboard, Copy, Plus, RotateCcw, Save, Terminal, Upload, X,
 } from "lucide-react";
 import { MetaHeader, MetaSubNav } from "@/components/metascraper/MetaSubNav";
-import { API_BASE, getConfig, importCapture, resetConfig, saveConfig } from "@/lib/metascraper/api";
+import { getConfig, importCapture, resetConfig, saveConfig } from "@/lib/metascraper/api";
 import { buildHuntCommand } from "@/lib/metascraper/command";
 import type { AppConfig, Competitor, Niche, NicheMode } from "@/lib/metascraper/types";
 
@@ -89,7 +89,7 @@ export default function MetaScraperConsole() {
     if (!config) return;
     localStorage.setItem(TOKEN_KEY, ingestToken);
     const cmd = buildHuntCommand(config, {
-      ingestUrl: autoSubmit ? `${API_BASE}/api/metascraper/capture` : null,
+      ingestUrl: autoSubmit ? `${window.location.origin}/api/metascraper/capture` : null,
       ingestToken: autoSubmit ? ingestToken.trim() || null : null,
     });
     setCommand(cmd);
