@@ -313,7 +313,7 @@ export async function runSearch(opts: {
     }
   }
 
-  await saveSettings({ lastSources: allItems, lastSearchMeta: meta });
+  saveSettings({ lastSources: allItems, lastSearchMeta: meta }).catch(console.error);
 
   const recordThisWeek = ranked
     .filter((t) => (t.score?.medicalRelevance ?? 0) >= 14 && (t.score?.safetyBrandFit ?? 0) >= 3)

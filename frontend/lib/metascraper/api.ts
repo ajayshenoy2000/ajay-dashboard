@@ -8,9 +8,6 @@ import type {
   Summary,
 } from "./types";
 
-// All MetaScraper routes are now served by Vercel API routes on the same origin.
-// No API_BASE prefix needed — relative paths work everywhere.
-
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
     const res = await fetch(path, { cache: "no-store" });

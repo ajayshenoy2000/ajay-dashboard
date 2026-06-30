@@ -1,9 +1,6 @@
 import { sampleBrief, sampleSources, sampleTrends } from "./trend-engine/server/sample-data";
 import type { AppSettings, Brief, SearchNowRequest, SearchNowResponse, SourceItem, Trend } from "./types";
 
-// All Trend Engine routes are now Vercel API routes on the same origin.
-// No API_BASE prefix needed — relative paths work everywhere.
-
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
     const response = await fetch(path, { cache: "no-store" });

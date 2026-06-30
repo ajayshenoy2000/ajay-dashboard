@@ -41,7 +41,7 @@ function nicheBlock(niche: Niche): string {
 }
 
 export interface CommandOptions {
-  ingestUrl?: string | null;   // e.g. https://lor-idea-engine.fly.dev/api/metascraper/capture
+  ingestUrl?: string | null;
   ingestToken?: string | null; // shared secret if the endpoint is guarded
 }
 
