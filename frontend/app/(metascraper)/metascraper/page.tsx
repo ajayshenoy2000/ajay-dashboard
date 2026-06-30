@@ -78,7 +78,7 @@ export default function MetaScraperConsole() {
       setDirty(false);
       flash("Config saved.");
     } catch {
-      flash("Save failed — is the backend running?");
+      flash("Save failed — check your connection and try again.");
     }
     setSaving(false);
   }

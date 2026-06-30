@@ -89,7 +89,7 @@ export function SearchControls({ settings }: { settings: AppSettings }) {
         message = searchError.message;
         // Extract API error from response text if available
         if (message.includes("<!DOCTYPE")) {
-          message = "Server error - please check the backend is running";
+          message = "Server error - try again in a moment";
         }
       }
       setError(message);
