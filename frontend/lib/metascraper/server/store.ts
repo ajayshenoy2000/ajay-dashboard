@@ -26,7 +26,10 @@ export async function loadConfig(): Promise<AppConfig> {
 
 export async function saveConfig(config: AppConfig): Promise<AppConfig> {
   const db = getDb();
-  if (db) await db.from(CONFIG_TABLE).upsert({ id: CONFIG_ID, payload: config });
+  if (db) {
+    const { error } = await db.from(CONFIG_TABLE).upsert({ id: CONFIG_ID, payload: config });
+    if (error) throw new Error(`metascraper_config upsert failed: ${error.message}`);
+  }
   return config;
 }
 

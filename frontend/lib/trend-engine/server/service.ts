@@ -151,7 +151,8 @@ export async function generateAndSaveBrief(rowId: string): Promise<Brief | null>
   const brief = await generateBriefForTrend(trend, provider);
 
   if (db) {
-    await db.from("briefs").insert({ id: briefId, trend_row_id: rowId, trend_id: trend.id, payload: brief });
+    const { error: briefErr } = await db.from("briefs").insert({ id: briefId, trend_row_id: rowId, trend_id: trend.id, payload: brief });
+    if (briefErr) throw new Error(`briefs insert failed: ${briefErr.message}`);
     await db.from("trends").update({ payload: { ...trend, hasBrief: true } }).eq("row_id", rowId);
   }
   return brief;
@@ -302,10 +303,12 @@ export async function runSearch(opts: {
   };
 
   if (db && ranked.length) {
-    const { data: batch } = await db.from("search_batches").insert({ meta }).select("id").single();
+    const { data: batch, error: batchErr } = await db.from("search_batches").insert({ meta }).select("id").single();
+    if (batchErr) throw new Error(`search_batches insert failed: ${batchErr.message}`);
     if (batch?.id) {
       const rows = ranked.map((t) => ({ trend_id: t.id, batch_id: batch.id, status: t.status, payload: t }));
-      const { data: inserted } = await db.from("trends").insert(rows).select("row_id, created_at");
+      const { data: inserted, error: trendsErr } = await db.from("trends").insert(rows).select("row_id, created_at");
+      if (trendsErr) throw new Error(`trends insert failed: ${trendsErr.message}`);
       for (let i = 0; i < ranked.length && i < (inserted ?? []).length; i++) {
         ranked[i].rowId = inserted![i].row_id;
         ranked[i].createdAt = inserted![i].created_at;
