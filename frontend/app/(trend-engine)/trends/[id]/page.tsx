@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { ScoreBreakdown } from "@/components/ScoreBreakdown";
 import { SourceList } from "@/components/SourceList";
 import { Tooltip } from "@/components/Tooltip";
-import { getTrend } from "@/lib/api";
+import { getTrend } from "@/lib/trend-engine/server/service";
 
 export default async function TrendDetailPage({ params }: { params: { id: string } }) {
   const trend = await getTrend(params.id);

@@ -1,6 +1,6 @@
 import { BriefPanel } from "@/components/BriefPanel";
 import { Header } from "@/components/Header";
-import { getBrief } from "@/lib/api";
+import { getBrief } from "@/lib/trend-engine/server/service";
 
 export default async function BriefPage({ params }: { params: { id: string } }) {
   const brief = await getBrief(params.id);
