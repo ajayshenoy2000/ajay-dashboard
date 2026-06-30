@@ -395,7 +395,8 @@ function ImportPanel({ onImported }: { onImported: (msg: string) => void }) {
     setBusy(true);
     try {
       const parsed = JSON.parse(raw);
-      const result = (await importCapture(parsed)) as { ingested?: number };
+      const token = localStorage.getItem("metascraper.ingestToken") ?? undefined;
+      const result = (await importCapture(parsed, token)) as { ingested?: number };
       onImported(`Imported ${result.ingested ?? 0} ads.`);
       setText("");
       setOpen(false);

@@ -62,10 +62,12 @@ export function getCaptures() {
   return getJson<Capture[]>("/api/metascraper/captures", []);
 }
 
-export async function importCapture(capture: unknown): Promise<unknown> {
+export async function importCapture(capture: unknown, token?: string): Promise<unknown> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["X-Ingest-Token"] = token;
   const res = await fetch("/api/metascraper/capture", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(capture),
   });
   if (!res.ok) throw new Error((await res.text()) || "Import failed");
