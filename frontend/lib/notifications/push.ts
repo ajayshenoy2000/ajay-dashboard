@@ -11,11 +11,11 @@ export async function sendPush(userId: string, title: string, body: string): Pro
   if (!appId || !apiKey) return false;
 
   try {
-    const res = await fetch("https://onesignal.com/api/v1/notifications", {
+    const res = await fetch("https://api.onesignal.com/notifications", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${apiKey}`,
+        Authorization: `Key ${apiKey}`,
       },
       body: JSON.stringify({
         app_id: appId,
