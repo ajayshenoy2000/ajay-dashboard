@@ -25,7 +25,13 @@ export async function sendPush(userId: string, title: string, body: string): Pro
         contents: { en: body },
       }),
     });
-    return res.ok;
+    if (!res.ok) return false;
+
+    // OneSignal may return 200 without creating a message when the targeted
+    // external ID has no subscribed device. Only mark the reminder delivered
+    // when the API returns a real message ID.
+    const result = (await res.json().catch(() => null)) as { id?: unknown } | null;
+    return typeof result?.id === "string" && result.id.length > 0;
   } catch {
     return false;
   }
