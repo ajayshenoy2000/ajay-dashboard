@@ -3,7 +3,8 @@
 -- five minutes instead.
 --
 -- Deployment prerequisites (stored outside source control in Supabase Vault):
---   task_reminder_url         e.g. https://ajay.my/api/tasks/due-reminders
+--   task_reminder_url         canonical URL with no redirect, e.g.
+--                             https://www.ajay.my/api/tasks/due-reminders
 --   task_reminder_cron_secret same value as the app's CRON_SECRET
 
 create extension if not exists pg_cron with schema pg_catalog;

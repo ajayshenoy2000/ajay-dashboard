@@ -31,7 +31,8 @@ Task reminders run from Supabase Cron every five minutes. Before applying
 `20260715000009_task_reminder_cron.sql` to a hosted project, add these secrets
 to Supabase Vault:
 
-- `task_reminder_url`: the deployed `/api/tasks/due-reminders` URL
+- `task_reminder_url`: the canonical, non-redirecting deployed
+  `/api/tasks/due-reminders` URL (redirects may strip the authorization header)
 - `task_reminder_cron_secret`: the same random value configured as
   `CRON_SECRET` in the app deployment
 
