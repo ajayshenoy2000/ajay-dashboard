@@ -25,6 +25,19 @@ supabase migration new <short_name>        # creates supabase/migrations/<utc-ti
 supabase db push                           # applies all pending migrations to the linked remote DB
 ```
 
+## Scheduled task reminders
+
+Task reminders run from Supabase Cron every five minutes. Before applying
+`20260715000009_task_reminder_cron.sql` to a hosted project, add these secrets
+to Supabase Vault:
+
+- `task_reminder_url`: the deployed `/api/tasks/due-reminders` URL
+- `task_reminder_cron_secret`: the same random value configured as
+  `CRON_SECRET` in the app deployment
+
+The scheduled database function safely becomes a no-op when either Vault value
+is absent, so local and preview databases do not call production accidentally.
+
 Every migration file should be idempotent (`create table if not exists`, `create index if not exists`, etc.)
 so re-running the full set against a database that already has some of these changes applied is always safe.
 

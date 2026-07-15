@@ -4,13 +4,14 @@ import { sendPush } from "@/lib/notifications/push";
 
 export const dynamic = "force-dynamic";
 
-// Cron target (see vercel.json). Not user-scoped — runs under the
-// service-role key across every user's due reminders. Guarded by a shared
-// secret rather than requireUserId, matching the pattern already used by
-// /api/metascraper/capture for other non-session-based callers.
+// Supabase Cron target. Not user-scoped — runs under the service-role key
+// across every user's due reminders. Guarded by a shared secret stored in
+// Supabase Vault and in the deployment environment.
 function checkCronSecret(req: NextRequest): boolean {
   const expected = process.env.CRON_SECRET;
-  if (!expected) return true; // open when unset (local dev / before Phase 5's cron is enabled)
+  // Keep local development convenient, but never expose the production job
+  // when its secret has been omitted or misconfigured.
+  if (!expected) return process.env.NODE_ENV !== "production";
   return req.headers.get("authorization") === `Bearer ${expected}`;
 }
 
