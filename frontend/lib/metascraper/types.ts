@@ -31,6 +31,8 @@ export interface Niche {
 export interface AppConfig {
   global: GlobalConfig;
   niches: Niche[];
+  keyword_banks?: Array<{ id: string; name: string; niche_ids: string[] }>;
+  active_keyword_bank_id?: string;
 }
 
 export interface ConfigResponse {

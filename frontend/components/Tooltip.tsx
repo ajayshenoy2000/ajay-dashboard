@@ -57,7 +57,7 @@ export function Tooltip({ children, content, side = "top" }: TooltipProps) {
 
       {isOpen && (
         <div
-          className={`fadeIn pointer-events-none absolute z-50 whitespace-nowrap rounded-md bg-ink/80 px-2.5 py-1.5 text-xs font-semibold text-white shadow-lg ${positionClasses[side]}`}
+          className={`fadeIn pointer-events-none absolute z-50 max-w-[min(16rem,calc(100vw-2rem))] rounded-md bg-ink/80 px-2.5 py-1.5 text-xs font-semibold text-white shadow-lg ${positionClasses[side]}`}
         >
           {content}
           <div className={`absolute border-4 ${arrowClasses[side]}`} />

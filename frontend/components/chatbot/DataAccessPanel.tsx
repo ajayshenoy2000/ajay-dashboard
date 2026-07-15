@@ -1,70 +1,61 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShieldCheck } from "lucide-react";
+import { CalendarClock, ListChecks, Radar, ShieldCheck, TrendingUp, X } from "lucide-react";
 import * as chatbotApi from "@/lib/chatbot/api";
 import type { ChatbotDataAccess } from "@/lib/chatbot/types";
 
-const TOGGLES: Array<{ key: keyof ChatbotDataAccess; label: string; hint: string }> = [
-  { key: "trendEngine", label: "Trend Engine", hint: "Trends, briefs & sources" },
-  { key: "metascraper", label: "MetaScraper", hint: "Competitor ad tracking" },
-  { key: "schedule", label: "Work Schedule", hint: "This week's shifts" },
-  { key: "tasks", label: "Tasks", hint: "Your open tasks & lists" },
+const TOGGLES: Array<{ key: keyof ChatbotDataAccess; label: string; icon: typeof TrendingUp }> = [
+  { key: "trendEngine", label: "Trends", icon: TrendingUp },
+  { key: "metascraper", label: "Ads", icon: Radar },
+  { key: "schedule", label: "Schedule", icon: CalendarClock },
+  { key: "tasks", label: "Tasks", icon: ListChecks },
 ];
 
-// Inline, always-visible (not a one-time dismissible banner) so the privacy
-// boundary stays easy to find and change, per Phase 7 of the overhaul plan —
-// runTool() re-checks these server-side on every call, this panel is just
-// the control surface.
-export function DataAccessPanel() {
-  const [access, setAccess] = useState<ChatbotDataAccess | null>(null);
+export function DataAccessMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [access, setAccess] = useState<ChatbotDataAccess>({ trendEngine: true, metascraper: true, schedule: true, tasks: true });
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    chatbotApi.getDataAccess().then(setAccess);
+    chatbotApi.getDataAccess().then(async (next) => {
+      const upgradeKey = "powerchat.dataAccess.v2";
+      if (!Object.values(next).some(Boolean) && !localStorage.getItem(upgradeKey)) {
+        next = await chatbotApi.setDataAccess({ trendEngine: true, metascraper: true, schedule: true, tasks: true });
+      }
+      localStorage.setItem(upgradeKey, "1");
+      setAccess(next);
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
   }, []);
 
   async function toggle(key: keyof ChatbotDataAccess) {
-    if (!access) return;
+    const previous = access;
     const next = { ...access, [key]: !access[key] };
     setAccess(next);
-    await chatbotApi.setDataAccess({ [key]: next[key] }).catch(() => setAccess(access));
+    await chatbotApi.setDataAccess({ [key]: next[key] }).catch(() => setAccess(previous));
   }
 
-  if (!access) return null;
-  const anyOn = Object.values(access).some(Boolean);
-
+  if (!open) return null;
   return (
-    <details className="mb-4 rounded-2xl border border-ink/10 bg-white shadow-soft">
-      <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-xs font-bold text-ink/60">
-        <ShieldCheck className="h-3.5 w-3.5 text-sage" />
-        Data access {anyOn ? "— some sources on" : "— all off"}
-      </summary>
-      <div className="space-y-2 border-t border-ink/8 px-4 py-3">
-        <p className="mb-1 text-[11px] leading-5 text-ink/45">
-          Choose what this assistant can look up on your behalf. Off by default — nothing is shared until you turn it on.
-        </p>
-        {TOGGLES.map((t) => (
-          <label key={t.key} className="flex items-center justify-between gap-3 py-1">
-            <div>
-              <p className="text-xs font-bold text-ink/75">{t.label}</p>
-              <p className="text-[11px] text-ink/40">{t.hint}</p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={access[t.key]}
-              onClick={() => toggle(t.key)}
-              className={`relative h-6 w-11 shrink-0 rounded-full transition ${access[t.key] ? "bg-sage" : "bg-ink/15"}`}
-            >
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  access[t.key] ? "translate-x-5" : "translate-x-0.5"
-                }`}
-              />
-            </button>
-          </label>
-        ))}
+    <div className="absolute bottom-[calc(100%+8px)] left-2 right-2 rounded-3xl border border-ink/10 bg-white p-3 shadow-[0_-12px_40px_rgba(24,33,31,0.18)]">
+      <div className="mb-3 flex items-center gap-2 px-1">
+        <ShieldCheck className="h-4 w-4 text-sage" />
+        <div className="min-w-0 flex-1"><p className="text-xs font-bold">Assistant access</p><p className="text-[10px] text-ink/40">Let PowerChat act across your workspace</p></div>
+        <button onClick={onClose} aria-label="Close data access"><X className="h-4 w-4 text-ink/35" /></button>
       </div>
-    </details>
+      <div className="grid grid-cols-2 gap-2">
+        {TOGGLES.map(({ key, label, icon: Icon }) => {
+          const on = access[key];
+          return (
+            <button key={key} disabled={!loaded} onClick={() => toggle(key)} className={`flex items-center gap-2 rounded-2xl border p-3 text-left transition ${on ? "border-sage/30 bg-sage/10 text-sage" : "border-ink/8 bg-mist text-ink/35"}`}>
+              <Icon className="h-4 w-4" />
+              <span className="flex-1 text-xs font-bold">{label}</span>
+              <span className={`h-2 w-2 rounded-full ${on ? "bg-sage" : "bg-ink/15"}`} />
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-2 px-1 text-[10px] leading-4 text-ink/35">All sources start on. Turn one off any time to keep it out of assistant actions.</p>
+    </div>
   );
 }

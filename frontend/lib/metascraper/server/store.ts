@@ -8,7 +8,25 @@ const ADS_TABLE = "metascraper_ads";
 const CAPTURES_TABLE = "metascraper_captures";
 
 export function loadSeedConfig(): AppConfig {
-  return seedJson as AppConfig;
+  return withKeywordBanks(seedJson as AppConfig);
+}
+
+function withKeywordBanks(config: AppConfig): AppConfig {
+  if (config.keyword_banks?.length) return config;
+  const grouped = new Map<string, string[]>();
+  for (const niche of config.niches) {
+    const ids = grouped.get(niche.group) ?? [];
+    ids.push(niche.id);
+    grouped.set(niche.group, ids);
+  }
+  const banks = [...grouped].map(([id, niche_ids]) => ({
+    id,
+    name: id.split("_").map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" "),
+    niche_ids,
+  }));
+  const activeIds = config.niches.filter((niche) => niche.enabled).map((niche) => niche.id);
+  banks.unshift({ id: "current-focus", name: "Current Focus", niche_ids: activeIds });
+  return { ...config, keyword_banks: banks, active_keyword_bank_id: "current-focus" };
 }
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -20,13 +38,14 @@ export async function loadConfig(userId: string): Promise<AppConfig> {
   const db = getDb();
   if (!db) return loadSeedConfig();
   const { data } = await db.from(CONFIG_TABLE).select("payload").eq("user_id", userId).limit(1);
-  if (data && data.length > 0) return data[0].payload as AppConfig;
+  if (data && data.length > 0) return withKeywordBanks(data[0].payload as AppConfig);
   const seed = loadSeedConfig();
   await saveConfig(userId, seed);
   return seed;
 }
 
 export async function saveConfig(userId: string, config: AppConfig): Promise<AppConfig> {
+  config = withKeywordBanks(config);
   const db = getDb();
   if (db) {
     const { error } = await db

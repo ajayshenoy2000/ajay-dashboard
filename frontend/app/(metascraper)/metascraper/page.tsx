@@ -22,7 +22,8 @@ export default function MetaScraperConsole() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [command, setCommand] = useState<string>("");
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set(GROUP_ORDER));
+  const [newBankName, setNewBankName] = useState("");
   const [ingestToken, setIngestToken] = useState("");
   const [autoSubmit, setAutoSubmit] = useState(true);
 
@@ -68,6 +69,31 @@ export default function MetaScraperConsole() {
   }, [config]);
 
   const enabledCount = config?.niches.filter((n) => n.enabled).length ?? 0;
+  const keywordBanks = config?.keyword_banks ?? [];
+
+  function selectBank(bankId: string) {
+    mutate((draft) => {
+      const bank = draft.keyword_banks?.find((item) => item.id === bankId);
+      if (!bank) return;
+      const selected = new Set(bank.niche_ids);
+      draft.active_keyword_bank_id = bank.id;
+      draft.niches.forEach((niche) => { niche.enabled = selected.has(niche.id); });
+    });
+  }
+
+  function addBank() {
+    if (!newBankName.trim()) return;
+    mutate((draft) => {
+      const bank = {
+        id: `${newBankName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") || "bank"}-${Date.now().toString(36)}`,
+        name: newBankName.trim(),
+        niche_ids: draft.niches.filter((niche) => niche.enabled).map((niche) => niche.id),
+      };
+      draft.keyword_banks = [...(draft.keyword_banks ?? []), bank];
+      draft.active_keyword_bank_id = bank.id;
+    });
+    setNewBankName("");
+  }
 
   async function handleSave() {
     if (!config) return;
@@ -124,15 +150,29 @@ export default function MetaScraperConsole() {
       <MetaSubNav />
 
       {toast && (
-        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(24,33,31,0.25)]">
+        <div className="fixed bottom-24 left-1/2 z-50 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-white shadow-[0_8px_24px_rgba(24,33,31,0.25)]">
           {toast}
         </div>
       )}
 
-      {/* Global settings bar */}
-      <section className="mb-4 rounded-2xl border border-ink/10 bg-white p-4 shadow-soft">
-        <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-ink/40">Global filters</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mb-4 rounded-3xl border border-ink/10 bg-white p-4 shadow-soft">
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-ink/40">Keyword banks</h2>
+        <div className="grid grid-cols-2 gap-2">
+          {keywordBanks.map((bank) => {
+            const active = bank.id === config.active_keyword_bank_id;
+            return <button key={bank.id} onClick={() => selectBank(bank.id)} className={`relative rounded-2xl border p-3 text-left ${active ? "border-coral bg-coral/8" : "border-ink/8 bg-mist/60"}`}><span className="block truncate text-xs font-bold">{bank.name}</span><span className="mt-1 block text-[10px] text-ink/40">{bank.niche_ids.length} niches</span>{active && <Check className="absolute right-2.5 top-2.5 h-3.5 w-3.5 text-coral" />}</button>;
+          })}
+        </div>
+        <div className="mt-2 flex gap-2">
+          <input value={newBankName} onChange={(event) => setNewBankName(event.target.value)} placeholder="Save current selection as…" className="min-w-0 flex-1 rounded-xl border border-ink/10 bg-mist px-3 text-xs outline-none focus:border-coral" />
+          <button onClick={addBank} disabled={!newBankName.trim() || enabledCount === 0} className="flex h-10 items-center gap-1 rounded-xl bg-ink px-3 text-xs font-bold text-white disabled:opacity-30"><Plus className="h-3.5 w-3.5" /> Save</button>
+        </div>
+      </section>
+
+      {/* Compact hunt settings */}
+      <details className="group mb-4 rounded-3xl border border-ink/10 bg-white shadow-soft">
+        <summary className="flex cursor-pointer list-none items-center justify-between p-4"><span><span className="block text-xs font-bold uppercase tracking-widest text-ink/40">Hunt settings</span><span className="mt-1 block text-xs text-ink/45">{config.global.country} · {config.global.media_type} · {config.global.capture_depth} ads/source</span></span><ChevronDown className="h-4 w-4 text-ink/35 transition group-open:rotate-180" /></summary>
+        <div className="grid grid-cols-2 gap-3 border-t border-ink/6 p-4">
           <label className="block">
             <span className="mb-1 block text-xs font-semibold text-ink/55">Country</span>
             <input
@@ -165,7 +205,7 @@ export default function MetaScraperConsole() {
               className="w-full rounded-xl border border-ink/12 bg-mist px-3 py-2 text-sm outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
             />
           </label>
-          <div className="block">
+          <div className="col-span-2 block">
             <span className="mb-1 block text-xs font-semibold text-ink/55">Platforms</span>
             <div className="flex flex-wrap gap-1">
               {PLATFORMS.map((p) => {
@@ -189,7 +229,7 @@ export default function MetaScraperConsole() {
             </div>
           </div>
         </div>
-      </section>
+      </details>
 
       {/* Generate hunt command — the signature element */}
       <section className="mb-4 overflow-hidden rounded-2xl bg-ink p-5 text-white shadow-[0_8px_32px_rgba(24,33,31,0.2)]">
@@ -231,10 +271,10 @@ export default function MetaScraperConsole() {
       {/* Import captures (manual fallback) */}
       <ImportPanel onImported={(msg) => flash(msg)} />
 
-      {/* Niche manager */}
+      {/* Detailed bank editor */}
       <section className="mb-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-bold">Niches & competitors</h2>
+          <div><h2 className="text-base font-bold">Bank details</h2><p className="text-[11px] text-ink/40">Open a category only when you need to edit individual terms or clinics.</p></div>
           <div className="flex gap-2">
             <button onClick={handleReset} className="inline-flex items-center gap-1.5 rounded-xl border border-ink/12 px-3 py-2 text-xs font-semibold text-ink/55 transition hover:bg-ink/5">
               <RotateCcw className="h-3.5 w-3.5" /> Reset

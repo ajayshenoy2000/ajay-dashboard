@@ -1,5 +1,5 @@
 import { sampleBrief, sampleSources, sampleTrends } from "./trend-engine/server/sample-data";
-import type { AppSettings, Brief, SearchNowRequest, SearchNowResponse, SourceItem, Trend } from "./types";
+import type { AppSettings, Brief, KeywordBank, SearchNowRequest, SearchNowResponse, SourceItem, Trend } from "./types";
 import { authFetch } from "./authFetch";
 
 async function getJson<T>(path: string, fallback: T): Promise<T> {
@@ -34,10 +34,6 @@ export function getTrendHistory() {
   return getJson<Trend[]>("/api/trend-history", []);
 }
 
-export function getRecordThisWeek() {
-  return getJson<Trend[]>("/api/record-this-week", sampleTrends.slice(0, 2));
-}
-
 export function getVideoOpportunities() {
   return getJson<Trend[]>("/api/video-opportunities", sampleTrends.slice(0, 2));
 }
@@ -64,6 +60,8 @@ export function getSettings() {
     "/api/settings",
     {
       keywords: ["二重整形", "埋没", "クマ取り", "美容医療", "涙袋", "ヒアルロン酸", "ボトックス", "マンジャロ", "GLP-1"],
+      keywordBanks: [{ id: "japanese-aesthetic-core", name: "Japanese Aesthetic Core", keywords: ["二重整形", "埋没", "クマ取り", "美容医療", "涙袋", "ヒアルロン酸", "ボトックス", "マンジャロ", "GLP-1"] }],
+      activeKeywordBankId: "japanese-aesthetic-core",
       scoringWeights: {
         trend_momentum: 25,
         google_search_demand: 20,
@@ -83,6 +81,16 @@ export function getSettings() {
     },
     30,
   );
+}
+
+export async function saveKeywordBanks(keywordBanks: KeywordBank[], activeKeywordBankId: string): Promise<AppSettings> {
+  const response = await authFetch("/api/keyword-banks", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ keywordBanks, activeKeywordBankId }),
+  });
+  if (!response.ok) throw new Error((await response.text()) || "Failed to save keyword banks");
+  return response.json() as Promise<AppSettings>;
 }
 
 export async function searchNow(payload: SearchNowRequest): Promise<SearchNowResponse> {

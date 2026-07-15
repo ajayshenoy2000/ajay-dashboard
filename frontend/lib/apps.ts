@@ -1,5 +1,5 @@
 import {
-  CalendarClock, CalendarDays, ListChecks, Radar, Sparkles, TrendingUp,
+  CalendarClock, ListChecks, Radar, Settings2, Sparkles, TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 
@@ -50,7 +50,7 @@ export const APPS: AppDef[] = [
     color: "#c69a48",
     tint: "rgba(198,154,72,0.14)",
     matches: (p) =>
-      p.startsWith("/trends") || p.startsWith("/briefs") || p.startsWith("/sources") || p === "/settings",
+      p.startsWith("/trends") || p.startsWith("/briefs") || p.startsWith("/sources"),
   },
   {
     key: "metascraper",
@@ -73,14 +73,14 @@ export const APPS: AppDef[] = [
     matches: (p) => p.startsWith("/schedule"),
   },
   {
-    key: "calendar",
-    label: "Calendar",
-    tagline: "Live Google Calendar",
-    href: "/calendar-app",
-    icon: CalendarDays,
-    color: "#4a9d8e",
-    tint: "rgba(74,157,142,0.14)",
-    matches: (p) => p.startsWith("/calendar-app"),
+    key: "settings",
+    label: "Settings",
+    tagline: "Account & connections",
+    href: "/settings",
+    icon: Settings2,
+    color: "#4a7d76",
+    tint: "rgba(74,125,118,0.14)",
+    matches: (p) => p.startsWith("/settings"),
   },
 ];
 

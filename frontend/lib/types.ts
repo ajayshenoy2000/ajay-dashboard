@@ -78,7 +78,6 @@ export type SearchNowRequest = {
 
 export type SearchNowResponse = {
   trends: Trend[];
-  recordThisWeek: Trend[];
   meta: {
     mode: string;
     timeWindow: string;
@@ -89,8 +88,16 @@ export type SearchNowResponse = {
   };
 };
 
+export type KeywordBank = {
+  id: string;
+  name: string;
+  keywords: string[];
+};
+
 export type AppSettings = {
   keywords: string[];
+  keywordBanks: KeywordBank[];
+  activeKeywordBankId: string;
   scoringWeights: Record<string, number>;
   channelId: string;
   modelProvider: string;

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
-import { DataAccessPanel } from "./DataAccessPanel";
 import { ConversationHistorySheet } from "./ConversationHistorySheet";
 import { useRegisterChatControls } from "@/components/nav/NavControlsProvider";
 import * as chatbotApi from "@/lib/chatbot/api";
@@ -94,15 +93,13 @@ export function ChatThread({ conversationId: initialConversationId }: { conversa
         onSelect={handleSelectConversation}
       />
 
-      <DataAccessPanel />
-
       <div className="flex-1 space-y-4 pb-4">
         {messages.length ? (
           messages.map((m) => <MessageBubble key={m.id} message={m} />)
         ) : (
           <div className="rounded-2xl border border-ink/10 bg-white px-6 py-10 text-center shadow-soft">
             <p className="text-sm font-semibold text-ink/40">Ask me anything.</p>
-            <p className="mt-1 text-xs text-ink/30">Turn on data access above and I can look up your trends, ads, schedule, or tasks.</p>
+            <p className="mt-1 text-xs text-ink/30">I can search your trends, ads, schedule, and tasks—and take supported actions for you.</p>
           </div>
         )}
         <div ref={bottomRef} />

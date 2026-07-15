@@ -13,13 +13,13 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Ajay",
-  description: "Personal dashboard — work schedule, tasks, and trend intelligence",
+  title: "Dashboard",
+  description: "Your connected workspace for tasks, trends, research, and AI",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Ajay",
+    title: "Dashboard",
   },
 };
 

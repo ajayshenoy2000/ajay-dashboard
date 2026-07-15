@@ -37,8 +37,9 @@ export async function POST(req: NextRequest) {
     const result = streamGateway("chatbot", {
       system:
         "You are a helpful assistant embedded in a personal dashboard. Use the available tools to answer " +
-        "questions about the user's own data when relevant. Be concise. If a tool isn't available, say so " +
-        "rather than guessing — the user controls which data sources you can access from Settings.",
+        "questions about the user's own data and take supported actions when the user asks. Be concise. " +
+        "Never perform an action unless the user clearly requested it. If a tool isn't available, say so " +
+        "rather than guessing — the user controls data access from the PowerChat dock.",
       messages: history
         .filter((m) => m.role === "user" || m.role === "assistant" || m.role === "system")
         .map((m) => ({ role: m.role as "user" | "assistant" | "system", content: m.content })),

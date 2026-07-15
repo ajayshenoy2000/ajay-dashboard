@@ -1,6 +1,7 @@
 import type { Brief, SourceItem, Trend, YouTubeVideo } from "@/lib/types";
 import { getDb } from "./db";
-import { loadSettings, saveSettings, DEFAULT_KEYWORDS } from "./settings";
+import { loadSettings, saveSettings } from "./settings";
+import type { KeywordBank } from "@/lib/types";
 import { collectGoogleNews } from "./collectors/google-news";
 import { collectGoogleTrends } from "./collectors/google-trends";
 import { collectYoutubeHistory } from "./collectors/youtube";
@@ -80,18 +81,10 @@ export async function getTopTrends(userId: string, limit = 20): Promise<Trend[]>
 export async function getTrendHistory(userId: string, limit = 100): Promise<Trend[]> {
   const db = getDb();
   if (!db) return [];
-  const batchId = await latestBatchId(db, userId);
-  let q = db.from("trends").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
-  if (batchId) q = q.neq("batch_id", batchId);
-  const { data } = await q;
+  const { data } = await db.from("trends").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
   const trends = (data ?? []).map(trendFromRow);
   await attachBriefFlags(db, userId, trends);
   return trends;
-}
-
-export async function getRecordThisWeek(userId: string, limit = 5): Promise<Trend[]> {
-  const trends = await getTopTrends(userId);
-  return trends.filter((t) => (t.score?.medicalRelevance ?? 0) >= 14 && (t.score?.safetyBrandFit ?? 0) >= 3).slice(0, limit);
 }
 
 export async function getVideoOpportunities(userId: string, limit = 10): Promise<Trend[]> {
@@ -142,7 +135,7 @@ export async function clearTrendHistory(userId: string, olderThanHours: number):
   const batchId = await latestBatchId(db, userId);
   let q = db.from("trends").delete().eq("user_id", userId).lt("created_at", cutoff);
   if (batchId) q = q.neq("batch_id", batchId);
-  const { data } = await q;
+  const { data } = await q.select("row_id");
   return (data as unknown as unknown[])?.length ?? 0;
 }
 
@@ -178,8 +171,10 @@ export async function getAppSettings(userId: string): Promise<Record<string, unk
   const settings = await loadSettings(userId);
   return {
     keywords: settings.keywords,
+    keywordBanks: settings.keywordBanks,
+    activeKeywordBankId: settings.activeKeywordBankId,
     scoringWeights: settings.scoringWeights,
-    channelId: process.env.YOUTUBE_CHANNEL_ID ?? "",
+    channelId: settings.channelId,
     modelProvider: "live",
     lastSearch: settings.lastSearchMeta,
     apiKeys: {
@@ -203,6 +198,29 @@ export async function setScoringWeights(userId: string, scoringWeights: Record<s
   await saveSettings(userId, { scoringWeights });
 }
 
+export async function saveKeywordBanks(
+  userId: string,
+  keywordBanks: KeywordBank[],
+  activeKeywordBankId: string,
+): Promise<void> {
+  const cleaned = keywordBanks
+    .map((bank) => ({
+      id: String(bank.id).trim(),
+      name: String(bank.name).trim(),
+      keywords: [...new Set(bank.keywords.map((keyword) => String(keyword).trim()).filter(Boolean))],
+    }))
+    .filter((bank) => bank.id && bank.name && bank.keywords.length);
+  if (!cleaned.length) throw new Error("Keep at least one keyword bank");
+  const active = cleaned.some((bank) => bank.id === activeKeywordBankId) ? activeKeywordBankId : cleaned[0].id;
+  const settings = await loadSettings(userId);
+  await saveSettings(userId, {
+    keywords: cleaned.find((bank) => bank.id === active)?.keywords ?? cleaned[0].keywords,
+    customKeywords: null,
+    useCustomOnly: false,
+    lastSearchMeta: { ...settings.lastSearchMeta, keywordBanks: cleaned, activeKeywordBankId: active },
+  });
+}
+
 export async function getRegionCode(userId: string): Promise<string> {
   return (await loadSettings(userId)).regionCode;
 }
@@ -217,7 +235,10 @@ export async function getChannelBaseline(userId: string): Promise<Record<string,
 
 export async function updateChannelId(userId: string, channelId: string): Promise<Record<string, unknown> | null> {
   const baseline = await computeChannelBaseline(channelId);
-  if (baseline) await saveSettings(userId, { channelBaseline: baseline });
+  if (baseline) {
+    const settings = await loadSettings(userId);
+    await saveSettings(userId, { channelBaseline: baseline, lastSearchMeta: { ...settings.lastSearchMeta, channelId } });
+  }
   return baseline;
 }
 
@@ -237,16 +258,15 @@ export async function runSearch(opts: {
   timeWindow: string;
   regionCode?: string;
   checkForChannelFit?: boolean;
-}): Promise<{ trends: Trend[]; recordThisWeek: Trend[]; meta: Record<string, unknown> }> {
+}): Promise<{ trends: Trend[]; meta: Record<string, unknown> }> {
   const { userId } = opts;
   const settings = await loadSettings(userId);
   const hours = TIME_WINDOWS[opts.timeWindow] ?? 24;
   const region = opts.regionCode ?? settings.regionCode;
 
-  // Determine keyword set
-  let keywords = settings.useCustomOnly
-    ? (settings.customKeywords ?? [])
-    : (settings.customKeywords ?? settings.keywords ?? DEFAULT_KEYWORDS);
+  const activeBank = settings.keywordBanks.find((bank) => bank.id === settings.activeKeywordBankId)
+    ?? settings.keywordBanks[0];
+  let keywords = activeBank.keywords;
 
   // Optional: expand keywords with LLM
   keywords = await expandKeywords(keywords, userId).catch(() => keywords);
@@ -303,6 +323,11 @@ export async function runSearch(opts: {
     sources: opts.sources,
     hours,
     keywordsUsed: keywords,
+    keywordBankId: activeBank.id,
+    keywordBankName: activeBank.name,
+    keywordBanks: settings.keywordBanks,
+    activeKeywordBankId: settings.activeKeywordBankId,
+    channelId: settings.channelId,
     xAvailable: Boolean(process.env.X_BEARER_TOKEN),
     sourcesAvailable: {
       x: Boolean(process.env.X_BEARER_TOKEN),
@@ -312,14 +337,14 @@ export async function runSearch(opts: {
     },
   };
 
-  if (db && ranked.length) {
+  if (db) {
     const { data: batch, error: batchErr } = await db
       .from("search_batches")
       .insert({ user_id: userId, meta })
       .select("id")
       .single();
     if (batchErr) throw new Error(`search_batches insert failed: ${batchErr.message}`);
-    if (batch?.id) {
+    if (batch?.id && ranked.length) {
       const rows = ranked.map((t) => ({ user_id: userId, trend_id: t.id, batch_id: batch.id, status: t.status, payload: t }));
       const { data: inserted, error: trendsErr } = await db.from("trends").insert(rows).select("row_id, created_at");
       if (trendsErr) throw new Error(`trends insert failed: ${trendsErr.message}`);
@@ -332,9 +357,5 @@ export async function runSearch(opts: {
 
   saveSettings(userId, { lastSources: allItems, lastSearchMeta: meta }).catch(console.error);
 
-  const recordThisWeek = ranked
-    .filter((t) => (t.score?.medicalRelevance ?? 0) >= 14 && (t.score?.safetyBrandFit ?? 0) >= 3)
-    .slice(0, 5);
-
-  return { trends: ranked, recordThisWeek, meta };
+  return { trends: ranked, meta };
 }

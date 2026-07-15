@@ -5,7 +5,7 @@ import { Link } from "next-view-transitions";
 import { usePathname } from "next/navigation";
 import {
   BarChart3, Check, ChevronUp, Compass, FileText, FolderKanban, History,
-  House, Images, LayoutGrid, ListChecks, Settings2, SlidersHorizontal,
+  House, Images, LayoutGrid, ListChecks, ShieldCheck, SlidersHorizontal,
   SquarePen, type LucideIcon,
 } from "lucide-react";
 import { APPS, appForPath } from "@/lib/apps";
@@ -13,6 +13,7 @@ import { CHAT_MODELS, chatModel } from "@/lib/ai/models";
 import { ModelBadge } from "@/components/chatbot/ModelBadge";
 import { useNavControls } from "@/components/nav/NavControlsProvider";
 import { haptic } from "@/lib/haptics";
+import { DataAccessMenu } from "@/components/chatbot/DataAccessPanel";
 
 interface SubTab {
   href: string;
@@ -28,7 +29,6 @@ const APP_TABS: Record<string, SubTab[]> = {
     { href: "/trends", label: "Discover", icon: Compass, isActive: (p) => p === "/trends" },
     { href: "/trends/history", label: "Trends", icon: BarChart3, isActive: (p) => p.startsWith("/trends/history") || p.startsWith("/sources") },
     { href: "/briefs", label: "Briefs", icon: FileText, isActive: (p) => p.startsWith("/briefs") },
-    { href: "/settings", label: "Settings", icon: Settings2, isActive: (p) => p === "/settings" },
   ],
   tasks: [
     { href: "/tasks", label: "Today", icon: ListChecks, isActive: (p) => p === "/tasks" },
@@ -154,6 +154,7 @@ function SingleViewBar({ label, accent, icon: Icon }: { label: string; accent: s
 function ChatBar() {
   const controls = useNavControls();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [accessOpen, setAccessOpen] = useState(false);
 
   // Controls not yet registered (first paint before ChatThread mounts): show
   // just the Home anchor so the bar never looks broken.
@@ -202,6 +203,16 @@ function ChatBar() {
       >
         <History className="h-[18px] w-[18px]" strokeWidth={2.2} />
       </button>
+
+      <button
+        onClick={() => { haptic(8); setAccessOpen((value) => !value); setPickerOpen(false); }}
+        aria-label="Assistant data access"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-ink/10 bg-white text-sage active:scale-95"
+      >
+        <ShieldCheck className="h-[18px] w-[18px]" strokeWidth={2.2} />
+      </button>
+
+      <DataAccessMenu open={accessOpen} onClose={() => setAccessOpen(false)} />
 
       {/* Model picker popover (opens upward) */}
       {pickerOpen && (

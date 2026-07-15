@@ -46,10 +46,19 @@ export default function DashboardPage() {
   const [selectedWeekDay, setSelectedWeekDay] = useState<WeekDay | null>(null);
   const [authSheetOpen, setAuthSheetOpen] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(true);
+  const [displayName, setDisplayName] = useState("there");
 
   useEffect(() => {
-    ensureSession().then((s) => setIsAnonymous(Boolean(s.user.is_anonymous))).catch(() => {});
-    return onAuthStateChange((session) => setIsAnonymous(session ? Boolean(session.user.is_anonymous) : true));
+    ensureSession().then((s) => {
+      setIsAnonymous(Boolean(s.user.is_anonymous));
+      const name = s.user.user_metadata?.full_name || s.user.user_metadata?.name || s.user.email?.split("@")[0];
+      if (name) setDisplayName(String(name).split(" ")[0]);
+    }).catch(() => {});
+    return onAuthStateChange((session) => {
+      setIsAnonymous(session ? Boolean(session.user.is_anonymous) : true);
+      const name = session?.user.user_metadata?.full_name || session?.user.user_metadata?.name || session?.user.email?.split("@")[0];
+      if (name) setDisplayName(String(name).split(" ")[0]);
+    });
   }, []);
 
   useEffect(() => {
@@ -90,7 +99,7 @@ export default function DashboardPage() {
           </button>
         </div>
         <h1 className="mt-1 text-3xl font-bold">
-          {greeting}, <span className="text-coral">Ajay</span>
+          {greeting}, <span className="text-coral">{displayName}</span>
         </h1>
       </header>
 

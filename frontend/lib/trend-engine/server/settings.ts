@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import type { KeywordBank } from "@/lib/types";
 
 export const DEFAULT_KEYWORDS = [
   "二重整形", "埋没", "クマ取り", "美容整形", "美容医療", "涙袋", "ヒアルロン酸",
@@ -15,12 +16,21 @@ export const DEFAULT_WEIGHTS = {
   safety_brand_fit: 5,
 };
 
+export const DEFAULT_KEYWORD_BANK: KeywordBank = {
+  id: "japanese-aesthetic-core",
+  name: "Japanese Aesthetic Core",
+  keywords: DEFAULT_KEYWORDS,
+};
+
 export type TrendSettings = {
   keywords: string[];
   customKeywords: string[] | null;
   useCustomOnly: boolean;
   scoringWeights: Record<string, number>;
+  keywordBanks: KeywordBank[];
+  activeKeywordBankId: string;
   channelBaseline: Record<string, unknown> | null;
+  channelId: string;
   regionCode: string;
   lastSources: unknown[];
   lastSearchMeta: Record<string, unknown>;
@@ -41,15 +51,23 @@ export async function loadSettings(userId: string): Promise<TrendSettings> {
   }
 
   const row = data[0];
+  const meta = row.last_search_meta ?? defaultSearchMeta();
+  const storedBanks = row.keyword_banks ?? meta.keywordBanks;
+  const keywordBanks = Array.isArray(storedBanks) && storedBanks.length
+    ? storedBanks as KeywordBank[]
+    : [{ ...DEFAULT_KEYWORD_BANK, keywords: row.keywords?.length ? row.keywords : DEFAULT_KEYWORDS }];
   return {
     keywords: row.keywords?.length ? row.keywords : DEFAULT_KEYWORDS,
     customKeywords: row.custom_keywords?.length ? row.custom_keywords : null,
     useCustomOnly: Boolean(row.use_custom_only),
     scoringWeights: row.scoring_weights ?? DEFAULT_WEIGHTS,
+    keywordBanks,
+    activeKeywordBankId: row.active_keyword_bank_id ?? meta.activeKeywordBankId ?? keywordBanks[0].id,
     channelBaseline: row.channel_baseline ?? null,
+    channelId: row.channel_id ?? meta.channelId ?? process.env.YOUTUBE_CHANNEL_ID ?? "",
     regionCode: row.region_code ?? "JP",
     lastSources: (row.last_sources as unknown[] | null) ?? [],
-    lastSearchMeta: row.last_search_meta ?? defaultSearchMeta(),
+    lastSearchMeta: meta,
   };
 }
 
@@ -77,7 +95,10 @@ function defaultSettings(): TrendSettings {
     customKeywords: null,
     useCustomOnly: false,
     scoringWeights: DEFAULT_WEIGHTS,
+    keywordBanks: [DEFAULT_KEYWORD_BANK],
+    activeKeywordBankId: DEFAULT_KEYWORD_BANK.id,
     channelBaseline: null,
+    channelId: process.env.YOUTUBE_CHANNEL_ID ?? "",
     regionCode: "JP",
     lastSources: [],
     lastSearchMeta: defaultSearchMeta(),

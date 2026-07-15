@@ -3,7 +3,7 @@ import type { ChatbotDataAccess } from "../types";
 
 // Uses the RLS-scoped per-user client (see lib/chatbot/server/service.ts note),
 // not service-role.
-const DEFAULTS: ChatbotDataAccess = { trendEngine: false, metascraper: false, schedule: false, tasks: false };
+const DEFAULTS: ChatbotDataAccess = { trendEngine: true, metascraper: true, schedule: true, tasks: true };
 
 export async function getDataAccess(db: SupabaseClient, userId: string): Promise<ChatbotDataAccess> {
   const { data } = await db.from("chatbot_data_access").select("*").eq("user_id", userId).limit(1);

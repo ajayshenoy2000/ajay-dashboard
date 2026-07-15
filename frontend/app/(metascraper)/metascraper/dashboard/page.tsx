@@ -165,74 +165,36 @@ export default function MetaScraperDashboard() {
         <span className="ml-auto text-xs font-semibold text-ink/40">{filtered.length} ad{filtered.length !== 1 ? "s" : ""}</span>
       </section>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-ink/10 bg-white shadow-soft">
-        <table className="w-full min-w-[820px] text-sm">
-          <thead>
-            <tr className="border-b border-ink/8 text-left text-[10px] font-bold uppercase tracking-wider text-ink/40">
-              <th className="px-3 py-2.5">Status</th>
-              <th className="px-3 py-2.5">Clinic</th>
-              <th className="px-3 py-2.5">Niche</th>
-              <th className="px-3 py-2.5 text-right">Days</th>
-              <th className="px-3 py-2.5 text-right">Weeks</th>
-              <th className="px-3 py-2.5">Started</th>
-              <th className="px-3 py-2.5">Media</th>
-              <th className="px-3 py-2.5">Hook</th>
-              <th className="px-3 py-2.5">Links</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-ink/6">
-            {filtered.map((ad) => {
-              const sm = STATUS_META[ad.status];
-              const StatusIcon = sm.icon;
-              const MediaTag = MEDIA_ICON[ad.media_type] ?? Layers;
-              return (
-                <tr
-                  key={ad.library_id}
-                  onClick={() => setSelected(ad)}
-                  className="cursor-pointer align-top transition hover:bg-mist/50"
-                >
-                  <td className="px-3 py-2.5">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${sm.cls}`}>
-                      <StatusIcon className="h-3 w-3" /> {sm.label}
-                    </span>
-                    {ad.proven && <span className="mt-1 flex items-center gap-1 text-[10px] font-bold text-coral"><Trophy className="h-3 w-3" /> proven</span>}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <div className="font-semibold">{ad.page_name || "—"}</div>
-                    {ad.primary_text && <div className="mt-0.5 max-w-[200px] truncate text-xs text-ink/40">{ad.primary_text}</div>}
-                  </td>
-                  <td className="px-3 py-2.5 text-xs text-ink/55">{nicheLabel[ad.niche_id] ?? ad.niche_id}</td>
-                  <td className="px-3 py-2.5 text-right font-bold tabular-nums">{ad.days_active ?? "—"}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-ink/55">{ad.weeks_observed}</td>
-                  <td className="px-3 py-2.5 text-xs text-ink/50">{ad.started_running_date ?? "—"}</td>
-                  <td className="px-3 py-2.5">
-                    <span className="inline-flex items-center gap-1 text-xs text-ink/55"><MediaTag className="h-3.5 w-3.5" /> {ad.media_type}</span>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <select
-                      value={ad.hook_category ?? ""}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => saveTag(ad.library_id, { hook_category: e.target.value || null })}
-                      className="rounded-lg border border-ink/12 bg-mist px-2 py-1 text-xs outline-none focus:border-coral"
-                    >
-                      <option value="">— tag —</option>
-                      {HOOKS.map((h) => <option key={h} value={h}>{h}</option>)}
-                    </select>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <a href={ad.ad_library_url} target="_blank" rel="noreferrer" title="View ad" className="text-ink/45 hover:text-coral"><ExternalLink className="h-4 w-4" /></a>
-                      {ad.landing_url && <a href={ad.landing_url} target="_blank" rel="noreferrer" title="Landing page" className="text-ink/45 hover:text-coral"><Sparkles className="h-4 w-4" /></a>}
-                      {ad.media_url && <a href={ad.media_url} target="_blank" rel="noreferrer" title="Media" className="text-ink/45 hover:text-coral"><Film className="h-4 w-4" /></a>}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* Native card grid — no horizontal table on mobile */}
+      {filtered.length ? (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {filtered.map((ad) => {
+            const sm = STATUS_META[ad.status];
+            const StatusIcon = sm.icon;
+            const MediaTag = MEDIA_ICON[ad.media_type] ?? Layers;
+            return (
+              <article key={ad.library_id} onClick={() => setSelected(ad)} className="min-w-0 cursor-pointer rounded-2xl border border-ink/10 bg-white p-3 shadow-soft active:scale-[0.99]">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold ${sm.cls}`}><StatusIcon className="h-3 w-3" /> {sm.label}</span>
+                  {ad.proven && <Trophy className="h-3.5 w-3.5 shrink-0 text-coral" />}
+                </div>
+                <h3 className="truncate text-xs font-bold">{ad.page_name || "Untitled ad"}</h3>
+                <p className="mt-0.5 truncate text-[10px] text-ink/40">{nicheLabel[ad.niche_id] ?? ad.niche_id}</p>
+                <div className="mt-3 grid grid-cols-2 gap-1.5">
+                  <div className="rounded-xl bg-mist p-2"><p className="text-sm font-bold tabular-nums">{ad.days_active ?? "—"}</p><p className="text-[8px] font-bold uppercase tracking-wide text-ink/35">days live</p></div>
+                  <div className="rounded-xl bg-mist p-2"><p className="flex items-center gap-1 text-[10px] font-bold capitalize"><MediaTag className="h-3 w-3" /> {ad.media_type}</p><p className="mt-1 text-[8px] font-bold uppercase tracking-wide text-ink/35">creative</p></div>
+                </div>
+                <div className="mt-2 flex items-center gap-1.5" onClick={(event) => event.stopPropagation()}>
+                  <select value={ad.hook_category ?? ""} onChange={(event) => saveTag(ad.library_id, { hook_category: event.target.value || null })} className="min-w-0 flex-1 truncate rounded-lg border border-ink/10 bg-mist px-1.5 py-1.5 text-[9px] font-semibold outline-none"><option value="">Tag hook</option>{HOOKS.map((hook) => <option key={hook} value={hook}>{hook.replace("_", " ")}</option>)}</select>
+                  <a href={ad.ad_library_url} target="_blank" rel="noreferrer" aria-label="Open ad" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink text-white"><ExternalLink className="h-3 w-3" /></a>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-3xl border border-dashed border-ink/15 bg-white p-8 text-center"><p className="text-sm font-bold text-ink/55">No ads match these filters</p><p className="mt-1 text-xs text-ink/35">Try a wider niche, status, or media selection.</p></div>
+      )}
 
       {selected && (
         <AdDetail
