@@ -1,11 +1,16 @@
+import { redirect } from "next/navigation";
 import { TrendsSubNav } from "@/components/TrendsSubNav";
 import { SourceFeed } from "@/components/SourceFeed";
 import { getSources } from "@/lib/trend-engine/server/service";
+import { getServerUserId } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
 
 export default async function SourcesPage() {
-  const sources = await getSources();
+  const userId = await getServerUserId();
+  if (!userId) redirect("/");
+
+  const sources = await getSources(userId);
 
   return (
     <div className="page-enter">

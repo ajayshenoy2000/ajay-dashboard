@@ -29,30 +29,30 @@ function adView(ad: StoredAd, rank: number | undefined) {
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-export async function getConfig() {
-  const config = await store.loadConfig();
+export async function getConfig(userId: string) {
+  const config = await store.loadConfig(userId);
   return { config, groupLabels: GROUP_LABELS, hookCategories: HOOK_CATEGORIES };
 }
 
-export async function putConfig(data: AppConfig) {
-  const config = await store.saveConfig(data);
+export async function putConfig(userId: string, data: AppConfig) {
+  const config = await store.saveConfig(userId, data);
   return { config };
 }
 
-export async function resetConfig() {
-  const config = await store.resetConfig();
+export async function resetConfig(userId: string) {
+  const config = await store.resetConfig(userId);
   return { config };
 }
 
 // ─── Ingest ──────────────────────────────────────────────────────────────────
 
-export async function ingestCapture(capture: CapturePayload) {
+export async function ingestCapture(userId: string, capture: CapturePayload) {
   const today = todayIso();
-  const before = await store.loadAds();
+  const before = await store.loadAds(userId);
   const beforeById = new Map(before.map((a) => [a.library_id, a]));
 
   const merged = mergeCapture(before, capture, today);
-  await store.saveAds(merged);
+  await store.saveAds(userId, merged);
 
   const newIds = merged
     .filter((a) => a.status === "new" && !beforeById.has(a.library_id))
@@ -74,15 +74,15 @@ export async function ingestCapture(capture: CapturePayload) {
     running: merged.filter((a) => a.status === "running").length,
   };
 
-  await store.recordCapture(capture, summary);
+  await store.recordCapture(userId, capture, summary);
   const sheet = await syncToSheet(merged);
   return { ...summary, sheet };
 }
 
 // ─── Dashboard reads ─────────────────────────────────────────────────────────
 
-export async function getAdsView() {
-  const ads = await store.loadAds();
+export async function getAdsView(userId: string) {
+  const ads = await store.loadAds(userId);
   const ranks = longevityRanks(ads);
   const view = ads.map((a) => adView(a, ranks.get(a.library_id)));
   view.sort(
@@ -93,8 +93,8 @@ export async function getAdsView() {
   return view;
 }
 
-export async function getSummary() {
-  const [ads, config] = await Promise.all([store.loadAds(), store.loadConfig()]);
+export async function getSummary(userId: string) {
+  const [ads, config] = await Promise.all([store.loadAds(userId), store.loadConfig(userId)]);
   const labelOf = Object.fromEntries(config.niches.map((n) => [n.id, n.label_jp]));
   const groupOf = Object.fromEntries(config.niches.map((n) => [n.id, n.group]));
 
@@ -122,7 +122,7 @@ export async function getSummary() {
     }
   }
 
-  const captures = await store.listCaptures();
+  const captures = await store.listCaptures(userId);
   return {
     totals: {
       tracked: ads.length,
@@ -135,13 +135,13 @@ export async function getSummary() {
   };
 }
 
-export async function getDiffSinceLast() {
-  const captures = await store.listCaptures();
+export async function getDiffSinceLast(userId: string) {
+  const captures = await store.listCaptures(userId);
   if (!captures.length) return { since: null, current: null, new: [], killed: [] };
 
   const currentDate = captures[0].captured_date as string;
-  const prevDate = await store.previousCaptureDate(currentDate);
-  const ads = await store.loadAds();
+  const prevDate = await store.previousCaptureDate(userId, currentDate);
+  const ads = await store.loadAds(userId);
   const ranks = longevityRanks(ads);
 
   return {
@@ -155,25 +155,26 @@ export async function getDiffSinceLast() {
 }
 
 export async function patchAd(
+  userId: string,
   libraryId: string,
   patch: { hook_category?: string | null; notes?: string | null },
 ) {
-  const ads = await store.loadAds();
+  const ads = await store.loadAds(userId);
   const target = ads.find((a) => a.library_id === libraryId);
   if (!target) return null;
   if ("hook_category" in patch) target.hook_category = patch.hook_category ?? null;
   if ("notes" in patch) target.notes = patch.notes ?? null;
-  await store.updateAd(target);
+  await store.updateAd(userId, target);
   const ranks = longevityRanks(ads);
   return adView(target, ranks.get(libraryId));
 }
 
-export async function getCaptures() {
-  return store.listCaptures();
+export async function getCaptures(userId: string) {
+  return store.listCaptures(userId);
 }
 
-export async function getHealth() {
-  const [ads, captures] = await Promise.all([store.loadAds(), store.listCaptures()]);
+export async function getHealth(userId: string) {
+  const [ads, captures] = await Promise.all([store.loadAds(userId), store.listCaptures(userId)]);
   return {
     ingest_token_set: Boolean(process.env.METASCRAPER_INGEST_TOKEN),
     sheet_configured: isConfigured(),

@@ -1,0 +1,60 @@
+-- ⚠️ DO NOT run this file automatically as part of `supabase db push` until you
+-- have completed a real signup (via the new AuthSheet) and replaced
+-- '<YOUR-REAL-UUID>' below with that account's actual auth.uid() (find it in
+-- Supabase Dashboard → Authentication → Users).
+--
+-- This is intentionally a manual, isolated step — see the "RLS backfill" risk
+-- noted in the overhaul plan. Run each numbered block separately and verify the
+-- row-count check before proceeding to the next.
+
+-- ── 1. Backfill existing (currently NULL) rows to the real account ──────────
+-- update search_batches       set user_id = '<YOUR-REAL-UUID>' where user_id is null;
+-- update trends               set user_id = '<YOUR-REAL-UUID>' where user_id is null;
+-- update briefs               set user_id = '<YOUR-REAL-UUID>' where user_id is null;
+-- update metascraper_ads      set user_id = '<YOUR-REAL-UUID>' where user_id is null;
+-- update metascraper_captures set user_id = '<YOUR-REAL-UUID>' where user_id is null;
+-- update trend_settings       set user_id = '<YOUR-REAL-UUID>' where user_id is null;
+-- update metascraper_config   set user_id = '<YOUR-REAL-UUID>' where user_id is null;
+
+-- ── 2. Verify — every one of these must return 0 before continuing ─────────
+-- select count(*) from search_batches       where user_id is null;
+-- select count(*) from trends               where user_id is null;
+-- select count(*) from briefs               where user_id is null;
+-- select count(*) from metascraper_ads      where user_id is null;
+-- select count(*) from metascraper_captures where user_id is null;
+-- select count(*) from trend_settings       where user_id is null;
+-- select count(*) from metascraper_config   where user_id is null;
+
+-- ── 3. Only after step 2 confirms zero NULLs, flip to NOT NULL + enable RLS ──
+-- alter table search_batches       alter column user_id set not null;
+-- alter table trends               alter column user_id set not null;
+-- alter table briefs               alter column user_id set not null;
+-- alter table metascraper_ads      alter column user_id set not null;
+-- alter table metascraper_captures alter column user_id set not null;
+-- alter table trend_settings       alter column user_id set not null;
+-- alter table metascraper_config   alter column user_id set not null;
+--
+-- alter table search_batches       enable row level security;
+-- alter table trends               enable row level security;
+-- alter table briefs               enable row level security;
+-- alter table metascraper_ads      enable row level security;
+-- alter table metascraper_captures enable row level security;
+--
+-- drop policy if exists "own rows" on search_batches;
+-- create policy "own rows" on search_batches for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- drop policy if exists "own rows" on trends;
+-- create policy "own rows" on trends for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- drop policy if exists "own rows" on briefs;
+-- create policy "own rows" on briefs for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- drop policy if exists "own rows" on metascraper_ads;
+-- create policy "own rows" on metascraper_ads for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- drop policy if exists "own rows" on metascraper_captures;
+-- create policy "own rows" on metascraper_captures for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- drop policy if exists "own rows" on trend_settings;
+-- create policy "own rows" on trend_settings for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- drop policy if exists "own rows" on metascraper_config;
+-- create policy "own rows" on metascraper_config for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Reminder: SUPABASE_SERVICE_KEY (used server-side by getDb() in this app) bypasses
+-- RLS entirely — these policies only protect against the anon/public key ever being
+-- used client-side against these tables directly.

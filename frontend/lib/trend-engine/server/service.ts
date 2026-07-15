@@ -34,200 +34,212 @@ function fallbackTitle(keyword: string, sources: SourceItem[]): string {
 }
 
 // ─── DB helpers ──────────────────────────────────────────────────────────────
+// Every table here (search_batches, trends, briefs) is scoped by a nullable
+// `user_id` column added in Phase 2 of the overhaul (see
+// supabase/migrations/20260714000002_auth_user_id_columns.sql). Until the
+// one-time backfill migration runs, pre-existing rows have user_id = NULL and
+// are invisible to every real user — that's intentional (see migration-v3's
+// comment) rather than a bug here.
 
 function trendFromRow(row: Record<string, unknown>): Trend {
   const payload = row.payload as Record<string, unknown>;
   return { ...payload, rowId: row.row_id, createdAt: row.created_at, status: row.status } as unknown as Trend;
 }
 
-async function latestBatchId(db: NonNullable<ReturnType<typeof getDb>>): Promise<string | null> {
-  const { data } = await db.from("search_batches").select("id").order("created_at", { ascending: false }).limit(1);
+async function latestBatchId(db: NonNullable<ReturnType<typeof getDb>>, userId: string): Promise<string | null> {
+  const { data } = await db
+    .from("search_batches")
+    .select("id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1);
   return data?.[0]?.id ?? null;
 }
 
-async function attachBriefFlags(db: NonNullable<ReturnType<typeof getDb>>, trends: Trend[]): Promise<void> {
+async function attachBriefFlags(db: NonNullable<ReturnType<typeof getDb>>, userId: string, trends: Trend[]): Promise<void> {
   const rowIds = trends.map((t) => t.rowId).filter(Boolean) as string[];
   if (!rowIds.length) return;
-  const { data } = await db.from("briefs").select("trend_row_id").in("trend_row_id", rowIds);
+  const { data } = await db.from("briefs").select("trend_row_id").eq("user_id", userId).in("trend_row_id", rowIds);
   const haveBrief = new Set((data ?? []).map((r) => r.trend_row_id));
   for (const t of trends) t.hasBrief = haveBrief.has(t.rowId ?? "");
 }
 
 // ─── Reads ────────────────────────────────────────────────────────────────────
 
-export async function getTopTrends(limit = 20): Promise<Trend[]> {
+export async function getTopTrends(userId: string, limit = 20): Promise<Trend[]> {
   const db = getDb();
   if (!db) return sampleTrends;
-  const batchId = await latestBatchId(db);
+  const batchId = await latestBatchId(db, userId);
   if (!batchId) return [];
-  const { data } = await db.from("trends").select("*").eq("batch_id", batchId);
+  const { data } = await db.from("trends").select("*").eq("user_id", userId).eq("batch_id", batchId);
   const trends = (data ?? []).map(trendFromRow);
-  await attachBriefFlags(db, trends);
+  await attachBriefFlags(db, userId, trends);
   return trends.sort((a, b) => (b.score?.total ?? 0) - (a.score?.total ?? 0)).slice(0, limit);
 }
 
-export async function getTrendHistory(limit = 100): Promise<Trend[]> {
+export async function getTrendHistory(userId: string, limit = 100): Promise<Trend[]> {
   const db = getDb();
   if (!db) return [];
-  const batchId = await latestBatchId(db);
-  let q = db.from("trends").select("*").order("created_at", { ascending: false }).limit(limit);
+  const batchId = await latestBatchId(db, userId);
+  let q = db.from("trends").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
   if (batchId) q = q.neq("batch_id", batchId);
   const { data } = await q;
   const trends = (data ?? []).map(trendFromRow);
-  await attachBriefFlags(db, trends);
+  await attachBriefFlags(db, userId, trends);
   return trends;
 }
 
-export async function getRecordThisWeek(limit = 5): Promise<Trend[]> {
-  const trends = await getTopTrends();
+export async function getRecordThisWeek(userId: string, limit = 5): Promise<Trend[]> {
+  const trends = await getTopTrends(userId);
   return trends.filter((t) => (t.score?.medicalRelevance ?? 0) >= 14 && (t.score?.safetyBrandFit ?? 0) >= 3).slice(0, limit);
 }
 
-export async function getVideoOpportunities(limit = 10): Promise<Trend[]> {
-  const trends = await getTopTrends();
+export async function getVideoOpportunities(userId: string, limit = 10): Promise<Trend[]> {
+  const trends = await getTopTrends(userId);
   return trends.filter((t) => (t.score?.youtubeHistoricalFit ?? 0) >= 10 || (t.score?.conversionPotential ?? 0) >= 5).slice(0, limit);
 }
 
-export async function getTrend(rowId: string): Promise<Trend | null> {
+export async function getTrend(userId: string, rowId: string): Promise<Trend | null> {
   const db = getDb();
   if (!db) return sampleTrends.find((t) => t.id === rowId) ?? null;
-  const { data } = await db.from("trends").select("*").eq("row_id", rowId).limit(1);
+  const { data } = await db.from("trends").select("*").eq("user_id", userId).eq("row_id", rowId).limit(1);
   if (!data?.length) return null;
   const trend = trendFromRow(data[0]);
-  await attachBriefFlags(db, [trend]);
+  await attachBriefFlags(db, userId, [trend]);
   return trend;
 }
 
-export async function deleteTrend(rowId: string): Promise<void> {
+export async function deleteTrend(userId: string, rowId: string): Promise<void> {
   const db = getDb();
-  if (db) await db.from("trends").delete().eq("row_id", rowId);
+  if (db) await db.from("trends").delete().eq("user_id", userId).eq("row_id", rowId);
 }
 
-export async function getBrief(briefId: string): Promise<Brief | null> {
+export async function getBrief(userId: string, briefId: string): Promise<Brief | null> {
   const db = getDb();
   if (!db) return sampleBrief;
-  const { data } = await db.from("briefs").select("*").eq("id", briefId).limit(1);
+  const { data } = await db.from("briefs").select("*").eq("user_id", userId).eq("id", briefId).limit(1);
   if (data?.length) return data[0].payload as Brief;
   const rowId = briefId.replace(/^brief-/, "");
-  return generateAndSaveBrief(rowId);
+  return generateAndSaveBrief(userId, rowId);
 }
 
-export async function getBriefs(): Promise<Brief[]> {
+export async function getBriefs(userId: string): Promise<Brief[]> {
   const db = getDb();
   if (!db) return [sampleBrief];
-  const { data } = await db.from("briefs").select("*").order("created_at", { ascending: false });
+  const { data } = await db.from("briefs").select("*").eq("user_id", userId).order("created_at", { ascending: false });
   return (data ?? []).map((r) => r.payload as Brief);
 }
 
-export async function deleteBrief(briefId: string): Promise<void> {
+export async function deleteBrief(userId: string, briefId: string): Promise<void> {
   const db = getDb();
-  if (db) await db.from("briefs").delete().eq("id", briefId);
+  if (db) await db.from("briefs").delete().eq("user_id", userId).eq("id", briefId);
 }
 
-export async function clearTrendHistory(olderThanHours: number): Promise<number> {
+export async function clearTrendHistory(userId: string, olderThanHours: number): Promise<number> {
   const db = getDb();
   if (!db) return 0;
   const cutoff = new Date(Date.now() - olderThanHours * 3_600_000).toISOString();
-  const batchId = await latestBatchId(db);
-  let q = db.from("trends").delete().lt("created_at", cutoff);
+  const batchId = await latestBatchId(db, userId);
+  let q = db.from("trends").delete().eq("user_id", userId).lt("created_at", cutoff);
   if (batchId) q = q.neq("batch_id", batchId);
   const { data } = await q;
   return (data as unknown as unknown[])?.length ?? 0;
 }
 
-export async function generateAndSaveBrief(rowId: string): Promise<Brief | null> {
+export async function generateAndSaveBrief(userId: string, rowId: string): Promise<Brief | null> {
   const briefId = `brief-${rowId}`;
   const db = getDb();
   if (db) {
-    const { data: existing } = await db.from("briefs").select("*").eq("id", briefId).limit(1);
+    const { data: existing } = await db.from("briefs").select("*").eq("user_id", userId).eq("id", briefId).limit(1);
     if (existing?.length) return existing[0].payload as Brief;
   }
 
-  const trend = await getTrend(rowId);
+  const trend = await getTrend(userId, rowId);
   if (!trend) return null;
 
-  const settings = await loadSettings();
-  const provider = (settings.lastSearchMeta.briefModelProvider as "claude" | "gpt") ?? "claude";
-  const brief = await generateBriefForTrend(trend, provider);
+  const brief = await generateBriefForTrend(trend, userId);
 
   if (db) {
-    const { error: briefErr } = await db.from("briefs").insert({ id: briefId, trend_row_id: rowId, trend_id: trend.id, payload: brief });
+    const { error: briefErr } = await db
+      .from("briefs")
+      .insert({ id: briefId, user_id: userId, trend_row_id: rowId, trend_id: trend.id, payload: brief });
     if (briefErr) throw new Error(`briefs insert failed: ${briefErr.message}`);
-    await db.from("trends").update({ payload: { ...trend, hasBrief: true } }).eq("row_id", rowId);
+    await db.from("trends").update({ payload: { ...trend, hasBrief: true } }).eq("user_id", userId).eq("row_id", rowId);
   }
   return brief;
 }
 
-export async function getSources(): Promise<SourceItem[]> {
-  const settings = await loadSettings();
+export async function getSources(userId: string): Promise<SourceItem[]> {
+  const settings = await loadSettings(userId);
   return settings.lastSources as SourceItem[];
 }
 
-export async function getAppSettings(): Promise<Record<string, unknown>> {
-  const settings = await loadSettings();
+export async function getAppSettings(userId: string): Promise<Record<string, unknown>> {
+  const settings = await loadSettings(userId);
   return {
     keywords: settings.keywords,
     scoringWeights: settings.scoringWeights,
     channelId: process.env.YOUTUBE_CHANNEL_ID ?? "",
     modelProvider: "live",
-    analysisModelProvider: "gpt",
-    briefModelProvider: "claude",
     lastSearch: settings.lastSearchMeta,
     apiKeys: {
       youtube: Boolean(process.env.YOUTUBE_API_KEY),
       x: Boolean(process.env.X_BEARER_TOKEN),
-      anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
-      openai: Boolean(process.env.OPENAI_API_KEY),
+      openrouter: Boolean(process.env.OPENROUTER_API_KEY),
     },
   };
 }
 
-export async function getCustomKeywords(): Promise<{ customKeywords: string[] | null; useCustomOnly: boolean }> {
-  const s = await loadSettings();
+export async function getCustomKeywords(userId: string): Promise<{ customKeywords: string[] | null; useCustomOnly: boolean }> {
+  const s = await loadSettings(userId);
   return { customKeywords: s.customKeywords, useCustomOnly: s.useCustomOnly };
 }
 
-export async function setCustomKeywords(keywords: string[], useCustomOnly: boolean): Promise<void> {
-  await saveSettings({ customKeywords: keywords.length ? keywords : null, useCustomOnly });
+export async function setCustomKeywords(userId: string, keywords: string[], useCustomOnly: boolean): Promise<void> {
+  await saveSettings(userId, { customKeywords: keywords.length ? keywords : null, useCustomOnly });
 }
 
-export async function getRegionCode(): Promise<string> {
-  return (await loadSettings()).regionCode;
+export async function setScoringWeights(userId: string, scoringWeights: Record<string, number>): Promise<void> {
+  await saveSettings(userId, { scoringWeights });
 }
 
-export async function setRegionCode(regionCode: string): Promise<void> {
-  await saveSettings({ regionCode });
+export async function getRegionCode(userId: string): Promise<string> {
+  return (await loadSettings(userId)).regionCode;
 }
 
-export async function getChannelBaseline(): Promise<Record<string, unknown> | null> {
-  return (await loadSettings()).channelBaseline;
+export async function setRegionCode(userId: string, regionCode: string): Promise<void> {
+  await saveSettings(userId, { regionCode });
 }
 
-export async function updateChannelId(channelId: string): Promise<Record<string, unknown> | null> {
+export async function getChannelBaseline(userId: string): Promise<Record<string, unknown> | null> {
+  return (await loadSettings(userId)).channelBaseline;
+}
+
+export async function updateChannelId(userId: string, channelId: string): Promise<Record<string, unknown> | null> {
   const baseline = await computeChannelBaseline(channelId);
-  if (baseline) await saveSettings({ channelBaseline: baseline });
+  if (baseline) await saveSettings(userId, { channelBaseline: baseline });
   return baseline;
 }
 
-export async function setTopicStatus(rowId: string, status: string): Promise<Trend | null> {
-  const trend = await getTrend(rowId);
+export async function setTopicStatus(userId: string, rowId: string, status: string): Promise<Trend | null> {
+  const trend = await getTrend(userId, rowId);
   if (!trend) return null;
   const db = getDb();
-  if (db) await db.from("trends").update({ status, payload: { ...trend, status } }).eq("row_id", rowId);
+  if (db) await db.from("trends").update({ status, payload: { ...trend, status } }).eq("user_id", userId).eq("row_id", rowId);
   return { ...trend, status } as Trend;
 }
 
 // ─── Main search ─────────────────────────────────────────────────────────────
 
 export async function runSearch(opts: {
+  userId: string;
   sources: string[];
   timeWindow: string;
-  analysisModelProvider: "claude" | "gpt";
-  briefModelProvider: "claude" | "gpt";
   regionCode?: string;
   checkForChannelFit?: boolean;
 }): Promise<{ trends: Trend[]; recordThisWeek: Trend[]; meta: Record<string, unknown> }> {
-  const settings = await loadSettings();
+  const { userId } = opts;
+  const settings = await loadSettings(userId);
   const hours = TIME_WINDOWS[opts.timeWindow] ?? 24;
   const region = opts.regionCode ?? settings.regionCode;
 
@@ -237,7 +249,7 @@ export async function runSearch(opts: {
     : (settings.customKeywords ?? settings.keywords ?? DEFAULT_KEYWORDS);
 
   // Optional: expand keywords with LLM
-  keywords = await expandKeywords(keywords, opts.analysisModelProvider).catch(() => keywords);
+  keywords = await expandKeywords(keywords, userId).catch(() => keywords);
 
   const baseline = opts.checkForChannelFit ? settings.channelBaseline : null;
 
@@ -280,7 +292,7 @@ export async function runSearch(opts: {
   // Enrich top trends with LLM titles/summaries
   await enrichTrendsWithAnalysis(
     ranked as Parameters<typeof enrichTrendsWithAnalysis>[0],
-    opts.analysisModelProvider,
+    userId,
   ).catch(() => {});
 
   // Persist to Supabase
@@ -289,8 +301,6 @@ export async function runSearch(opts: {
     mode: "live",
     timeWindow: opts.timeWindow,
     sources: opts.sources,
-    analysisModelProvider: opts.analysisModelProvider,
-    briefModelProvider: opts.briefModelProvider,
     hours,
     keywordsUsed: keywords,
     xAvailable: Boolean(process.env.X_BEARER_TOKEN),
@@ -303,10 +313,14 @@ export async function runSearch(opts: {
   };
 
   if (db && ranked.length) {
-    const { data: batch, error: batchErr } = await db.from("search_batches").insert({ meta }).select("id").single();
+    const { data: batch, error: batchErr } = await db
+      .from("search_batches")
+      .insert({ user_id: userId, meta })
+      .select("id")
+      .single();
     if (batchErr) throw new Error(`search_batches insert failed: ${batchErr.message}`);
     if (batch?.id) {
-      const rows = ranked.map((t) => ({ trend_id: t.id, batch_id: batch.id, status: t.status, payload: t }));
+      const rows = ranked.map((t) => ({ user_id: userId, trend_id: t.id, batch_id: batch.id, status: t.status, payload: t }));
       const { data: inserted, error: trendsErr } = await db.from("trends").insert(rows).select("row_id, created_at");
       if (trendsErr) throw new Error(`trends insert failed: ${trendsErr.message}`);
       for (let i = 0; i < ranked.length && i < (inserted ?? []).length; i++) {
@@ -316,7 +330,7 @@ export async function runSearch(opts: {
     }
   }
 
-  saveSettings({ lastSources: allItems, lastSearchMeta: meta }).catch(console.error);
+  saveSettings(userId, { lastSources: allItems, lastSearchMeta: meta }).catch(console.error);
 
   const recordThisWeek = ranked
     .filter((t) => (t.score?.medicalRelevance ?? 0) >= 14 && (t.score?.safetyBrandFit ?? 0) >= 3)

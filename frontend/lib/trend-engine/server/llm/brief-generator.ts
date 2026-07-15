@@ -1,5 +1,6 @@
 import type { Brief, Trend } from "@/lib/types";
-import { complete, parseJsonBlock, PROMPTS } from "./providers";
+import { parseJsonBlock, PROMPTS } from "./providers";
+import { callGateway } from "@/lib/ai/gateway";
 
 function strList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -38,21 +39,24 @@ function templateBrief(trend: Trend): Brief {
   };
 }
 
-export async function generateBriefForTrend(
-  trend: Trend,
-  provider: "claude" | "gpt" = "claude",
-): Promise<Brief> {
+export async function generateBriefForTrend(trend: Trend, userId?: string): Promise<Brief> {
   const fallback = templateBrief(trend);
   const snippets = trend.sources
     .slice(0, 10)
     .map((s) => `- [${s.source}] ${s.title} ${s.text}`.slice(0, 300))
     .join("\n");
 
-  const text = await complete(
-    provider,
-    PROMPTS.RIKI_STYLE,
-    `${PROMPTS.VIDEO_BRIEF}\n\n## トレンド\nキーワード: ${trend.keyword}\nタイトル: ${trend.title}\n概要: ${trend.summary}\n重要な理由: ${trend.whyItMatters}\n収集データ:\n${snippets || "(なし)"}`,
-  );
+  let text: string;
+  try {
+    const res = await callGateway("brief-generation", {
+      system: PROMPTS.RIKI_STYLE,
+      prompt: `${PROMPTS.VIDEO_BRIEF}\n\n## トレンド\nキーワード: ${trend.keyword}\nタイトル: ${trend.title}\n概要: ${trend.summary}\n重要な理由: ${trend.whyItMatters}\n収集データ:\n${snippets || "(なし)"}`,
+      userId,
+    });
+    text = res.text;
+  } catch {
+    return fallback;
+  }
   if (!text) return fallback;
   const data = parseJsonBlock(text);
   if (!data) return fallback;

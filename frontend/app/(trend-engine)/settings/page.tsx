@@ -5,17 +5,39 @@ import { Header } from "@/components/Header";
 import { useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
 import { clearTrendHistory, updateChannelId } from "@/lib/api";
+import { authFetch } from "@/lib/authFetch";
+
+// Mirrors DEFAULT_WEIGHTS in lib/trend-engine/server/settings.ts — duplicated
+// rather than imported since that module pulls in server-only DB code that
+// shouldn't end up in the client bundle.
+const DEFAULT_WEIGHTS: Record<string, number> = {
+  trend_momentum: 25,
+  google_search_demand: 20,
+  medical_relevance: 20,
+  youtube_historical_fit: 20,
+  conversion_potential: 10,
+  safety_brand_fit: 5,
+};
 
 interface Settings {
   keywords: string[];
+  scoringWeights: Record<string, number>;
   apiKeys: {
     youtube: boolean;
     x: boolean;
-    anthropic: boolean;
-    openai: boolean;
+    openrouter: boolean;
   };
   channelId: string;
 }
+
+const WEIGHT_LABELS: Record<string, string> = {
+  trend_momentum: "Trend Momentum",
+  google_search_demand: "Google Search Demand",
+  medical_relevance: "Medical Relevance",
+  youtube_historical_fit: "YouTube Historical Fit",
+  conversion_potential: "Conversion Potential",
+  safety_brand_fit: "Safety / Brand Fit",
+};
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -32,13 +54,18 @@ export default function SettingsPage() {
   const [updatingChannel, setUpdatingChannel] = useState(false);
   const [channelError, setChannelError] = useState<string | null>(null);
   const [channelSuccess, setChannelSuccess] = useState(false);
+  const [weights, setWeights] = useState<Record<string, number>>(DEFAULT_WEIGHTS);
+  const [savingWeights, setSavingWeights] = useState(false);
+  const [weightsSuccess, setWeightsSuccess] = useState(false);
+  const [weightsError, setWeightsError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/settings", { cache: "no-store" })
+    authFetch("/api/settings", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         setSettings(data);
         setKeywords(data.keywords);
+        setWeights(data.scoringWeights ?? DEFAULT_WEIGHTS);
       })
       .catch((err) => setError(err.message));
   }, []);
@@ -63,7 +90,7 @@ export default function SettingsPage() {
     setError(null);
     setSuccess(false);
     try {
-      const response = await fetch("/api/keywords", {
+      const response = await authFetch("/api/keywords", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keywords }),
@@ -75,6 +102,30 @@ export default function SettingsPage() {
       setError(err instanceof Error ? err.message : "Error saving keywords");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleWeightChange = (key: string, value: number) => {
+    setWeights((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveWeights = async () => {
+    setSavingWeights(true);
+    setWeightsError(null);
+    setWeightsSuccess(false);
+    try {
+      const response = await authFetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scoringWeights: weights }),
+      });
+      if (!response.ok) throw new Error("Failed to save scoring weights");
+      setWeightsSuccess(true);
+      setTimeout(() => setWeightsSuccess(false), 3000);
+    } catch (err) {
+      setWeightsError(err instanceof Error ? err.message : "Error saving scoring weights");
+    } finally {
+      setSavingWeights(false);
     }
   };
 
@@ -137,8 +188,7 @@ export default function SettingsPage() {
             <Status label="YouTube API Key" ready={settings.apiKeys.youtube} />
             <Status label="YouTube Channel ID" ready={Boolean(settings.channelId)} value={settings.channelId || "Not set"} />
             <Status label="X Bearer Token" ready={settings.apiKeys.x} />
-            <Status label="Anthropic API Key" ready={settings.apiKeys.anthropic} />
-            <Status label="OpenAI API Key" ready={settings.apiKeys.openai} />
+            <Status label="OpenRouter API Key" ready={settings.apiKeys.openrouter} />
           </div>
         </section>
         <section className="rounded-md border border-ink/10 bg-white p-4 shadow-soft lg:col-span-2">
@@ -187,6 +237,40 @@ export default function SettingsPage() {
             className="min-h-11 w-full rounded-md bg-sage px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-ink/25"
           >
             {saving ? "Saving..." : "Save Keywords"}
+          </button>
+        </section>
+        <section className="rounded-md border border-ink/10 bg-white p-4 shadow-soft lg:col-span-2">
+          <h2 className="mb-1 text-xl font-bold">Scoring Weights</h2>
+          <p className="mb-4 text-sm text-ink/60">
+            Controls how much each factor contributes to a trend&apos;s overall score. Defaults sum to 100, but each
+            weight is really just that dimension&apos;s point cap — they don&apos;t have to add up to anything in particular.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {Object.entries(WEIGHT_LABELS).map(([key, label]) => (
+              <label key={key} className="block">
+                <span className="mb-1 flex items-center justify-between text-sm font-bold text-ink/70">
+                  {label}
+                  <span className="text-ink/40">{weights[key] ?? 0}</span>
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={40}
+                  value={weights[key] ?? 0}
+                  onChange={(e) => handleWeightChange(key, Number(e.target.value))}
+                  className="w-full accent-sage"
+                />
+              </label>
+            ))}
+          </div>
+          {weightsError && <p className="mt-3 text-sm text-coral">{weightsError}</p>}
+          {weightsSuccess && <p className="mt-3 text-sm font-bold text-sage">Scoring weights updated!</p>}
+          <button
+            onClick={handleSaveWeights}
+            disabled={savingWeights}
+            className="mt-4 min-h-11 w-full rounded-md bg-sage px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-ink/25"
+          >
+            {savingWeights ? "Saving..." : "Save Scoring Weights"}
           </button>
         </section>
         <section className="rounded-md border border-ink/10 bg-white p-4 shadow-soft lg:col-span-2">

@@ -2,19 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "ajay-backend",
-      "runtimeExecutable": "backend/.venv/bin/python3",
-      "runtimeArgs": ["-m", "uvicorn", "backend.main:app", "--port", "8000"],
-      "cwd": "/Users/ajay/Downloads/ajay-dashboard",
-      "port": 8000,
-      "autoPort": false
-    },
-    {
       "name": "ajay-next",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "-p", "3003"],
+      "runtimeArgs": ["run", "dev"],
       "cwd": "/Users/ajay/Downloads/ajay-dashboard/frontend",
-      "port": 3003
+      "port": 3003,
+      "autoPort": true
     }
   ]
 }

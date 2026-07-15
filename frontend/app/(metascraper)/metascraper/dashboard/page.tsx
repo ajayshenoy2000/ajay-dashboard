@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { AdDetail } from "@/components/metascraper/AdDetail";
 import { MetaHeader, MetaSubNav } from "@/components/metascraper/MetaSubNav";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { getAds, getConfig, getDiffSinceLast, getSummary, patchAd } from "@/lib/metascraper/api";
 import type { AdRecord, DiffSinceLast, Niche, Summary } from "@/lib/metascraper/types";
 
@@ -72,7 +73,7 @@ export default function MetaScraperDashboard() {
 
   if (loaded && ads.length === 0) {
     return (
-      <>
+      <PullToRefresh onRefresh={load}>
         <MetaHeader subtitle="Competitive ad intelligence — longevity is the signal." />
         <MetaSubNav />
         <div className="rounded-2xl border border-dashed border-ink/15 bg-white p-10 text-center">
@@ -82,12 +83,12 @@ export default function MetaScraperDashboard() {
             Head to the Console, generate a hunt command, and run it in Claude-in-Chrome. Results land here.
           </p>
         </div>
-      </>
+      </PullToRefresh>
     );
   }
 
   return (
-    <>
+    <PullToRefresh onRefresh={load}>
       <MetaHeader subtitle="Competitive ad intelligence — longevity is the signal." />
       <MetaSubNav />
 
@@ -241,7 +242,7 @@ export default function MetaScraperDashboard() {
           onSaved={applyAdUpdate}
         />
       )}
-    </>
+    </PullToRefresh>
   );
 }
 

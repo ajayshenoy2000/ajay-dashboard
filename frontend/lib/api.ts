@@ -1,9 +1,10 @@
 import { sampleBrief, sampleSources, sampleTrends } from "./trend-engine/server/sample-data";
 import type { AppSettings, Brief, SearchNowRequest, SearchNowResponse, SourceItem, Trend } from "./types";
+import { authFetch } from "./authFetch";
 
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
-    const response = await fetch(path, { cache: "no-store" });
+    const response = await authFetch(path, { cache: "no-store" });
     if (!response.ok) {
       console.warn(`API request failed: ${path} (${response.status})`);
       return fallback;
@@ -15,18 +16,14 @@ async function getJson<T>(path: string, fallback: T): Promise<T> {
   }
 }
 
-async function getJsonRevalidated<T>(path: string, fallback: T, revalidateSeconds: number): Promise<T> {
-  try {
-    const response = await fetch(path, { next: { revalidate: revalidateSeconds } });
-    if (!response.ok) {
-      console.warn(`API request failed: ${path} (${response.status})`);
-      return fallback;
-    }
-    return (await response.json()) as T;
-  } catch (error) {
-    console.warn(`API request error: ${path}`, error);
-    return fallback;
-  }
+// Note: no longer passes Next.js `next: { revalidate }` — that option only
+// applies to server-side fetch caching, and every call here now carries a
+// per-user Authorization header, so a shared/revalidated cache would risk
+// serving one user's data to another. All callers are client components
+// anyway (this option was already a no-op for them), so this is a no-op
+// behavior change, not a regression.
+async function getJsonRevalidated<T>(path: string, fallback: T, _revalidateSeconds: number): Promise<T> {
+  return getJson(path, fallback);
 }
 
 export function getTopTrends() {
@@ -77,23 +74,19 @@ export function getSettings() {
       },
       channelId: "",
       modelProvider: "mock",
-      analysisModelProvider: "gpt",
-      briefModelProvider: "claude",
       lastSearch: {
         mode: "sample",
         timeWindow: "sample",
         sources: ["x", "google_news", "google_trends", "youtube"],
-        analysisModelProvider: "gpt",
-        briefModelProvider: "claude",
       },
-      apiKeys: { youtube: false, x: false, anthropic: false, openai: false },
+      apiKeys: { youtube: false, x: false, openrouter: false },
     },
     30,
   );
 }
 
 export async function searchNow(payload: SearchNowRequest): Promise<SearchNowResponse> {
-  const response = await fetch("/api/search-now", {
+  const response = await authFetch("/api/search-now", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -103,7 +96,7 @@ export async function searchNow(payload: SearchNowRequest): Promise<SearchNowRes
 }
 
 export async function generateBrief(rowId: string): Promise<Brief> {
-  const response = await fetch("/api/generate-brief", {
+  const response = await authFetch("/api/generate-brief", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ rowId }),
@@ -114,18 +107,18 @@ export async function generateBrief(rowId: string): Promise<Brief> {
 
 export async function deleteTrend(rowId: string): Promise<void> {
   if (!rowId) throw new Error("Trend ID is required");
-  const response = await fetch(`/api/trends/${rowId}`, { method: "DELETE" });
+  const response = await authFetch(`/api/trends/${rowId}`, { method: "DELETE" });
   if (!response.ok) throw new Error((await response.text()) || "Failed to delete trend");
 }
 
 export async function deleteBrief(briefId: string): Promise<void> {
   if (!briefId) throw new Error("Brief ID is required");
-  const response = await fetch(`/api/briefs/${briefId}`, { method: "DELETE" });
+  const response = await authFetch(`/api/briefs/${briefId}`, { method: "DELETE" });
   if (!response.ok) throw new Error((await response.text()) || "Failed to delete brief");
 }
 
 export async function clearTrendHistory(olderThanHours: number): Promise<{ deletedCount: number }> {
-  const response = await fetch("/api/clear-history", {
+  const response = await authFetch("/api/clear-history", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ olderThanHours }),
@@ -135,7 +128,7 @@ export async function clearTrendHistory(olderThanHours: number): Promise<{ delet
 }
 
 export async function setCustomKeywords(keywords: string[], useCustomOnly: boolean): Promise<void> {
-  const response = await fetch("/api/custom-keywords", {
+  const response = await authFetch("/api/custom-keywords", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ keywords, useCustomOnly }),
@@ -148,7 +141,7 @@ export async function getCustomKeywords(): Promise<{ customKeywords: string[] | 
 }
 
 export async function updateChannelId(channelId: string): Promise<{ success: boolean; baseline: unknown }> {
-  const response = await fetch("/api/update-channel-id", {
+  const response = await authFetch("/api/update-channel-id", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ channelId }),
@@ -166,7 +159,7 @@ export async function getRegionCode(): Promise<{ regionCode: string }> {
 }
 
 export async function setRegionCode(regionCode: string): Promise<{ regionCode: string }> {
-  const response = await fetch("/api/region-code", {
+  const response = await authFetch("/api/region-code", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ regionCode }),

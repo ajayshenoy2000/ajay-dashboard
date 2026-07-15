@@ -1,9 +1,14 @@
+import { redirect } from "next/navigation";
 import { Header } from "@/components/Header";
 import { BriefCard } from "@/components/BriefCard";
 import { getBriefs } from "@/lib/trend-engine/server/service";
+import { getServerUserId } from "@/lib/supabase-server";
 
 export default async function BriefsPage() {
-  const briefs = await getBriefs();
+  const userId = await getServerUserId();
+  if (!userId) redirect("/");
+
+  const briefs = await getBriefs(userId);
 
   return (
     <div>

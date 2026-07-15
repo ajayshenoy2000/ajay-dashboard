@@ -68,13 +68,10 @@ export type Brief = {
 
 export type SearchSource = "x" | "google_news" | "google_trends" | "youtube";
 export type TimeWindow = "12h" | "24h" | "3d" | "7d" | "30d" | "60d" | "90d";
-export type ModelProvider = "gpt" | "claude";
 
 export type SearchNowRequest = {
   sources: SearchSource[];
   timeWindow: TimeWindow;
-  analysisModelProvider: ModelProvider;
-  briefModelProvider: ModelProvider;
   regionCode?: string;
   checkForChannelFit?: boolean;
 };
@@ -86,8 +83,6 @@ export type SearchNowResponse = {
     mode: string;
     timeWindow: string;
     sources: string[];
-    analysisModelProvider: string;
-    briefModelProvider: string;
     hours?: number;
     keywordsUsed?: string[];
     xAvailable?: boolean;
@@ -99,13 +94,10 @@ export type AppSettings = {
   scoringWeights: Record<string, number>;
   channelId: string;
   modelProvider: string;
-  analysisModelProvider: ModelProvider;
-  briefModelProvider: ModelProvider;
   lastSearch: SearchNowResponse["meta"];
   apiKeys: {
     youtube: boolean;
     x: boolean;
-    anthropic: boolean;
-    openai: boolean;
+    openrouter: boolean;
   };
 };

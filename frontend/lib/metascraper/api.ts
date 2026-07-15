@@ -7,10 +7,11 @@ import type {
   Health,
   Summary,
 } from "./types";
+import { authFetch } from "../authFetch";
 
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
-    const res = await fetch(path, { cache: "no-store" });
+    const res = await authFetch(path, { cache: "no-store" });
     if (!res.ok) {
       console.warn(`MetaScraper API failed: ${path} (${res.status})`);
       return fallback;
@@ -27,7 +28,7 @@ export function getConfig() {
 }
 
 export async function saveConfig(config: AppConfig): Promise<AppConfig> {
-  const res = await fetch("/api/metascraper/config", {
+  const res = await authFetch("/api/metascraper/config", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ config }),
@@ -37,7 +38,7 @@ export async function saveConfig(config: AppConfig): Promise<AppConfig> {
 }
 
 export async function resetConfig(): Promise<AppConfig> {
-  const res = await fetch("/api/metascraper/config/reset", { method: "POST" });
+  const res = await authFetch("/api/metascraper/config/reset", { method: "POST" });
   if (!res.ok) throw new Error("Failed to reset config");
   return (await res.json()).config as AppConfig;
 }
@@ -67,6 +68,10 @@ export function getCaptures() {
   return getJson<Capture[]>("/api/metascraper/captures", []);
 }
 
+// Deliberately plain fetch, not authFetch: this route is also hit externally
+// (pasted into Claude-in-Chrome, no browser session available there), so it
+// authenticates via X-Ingest-Token instead of a user session — see
+// app/api/metascraper/capture/route.ts.
 export async function importCapture(capture: unknown, token?: string): Promise<unknown> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["X-Ingest-Token"] = token;
@@ -83,7 +88,7 @@ export async function patchAd(
   libraryId: string,
   patch: { hook_category?: string | null; notes?: string | null },
 ): Promise<AdRecord> {
-  const res = await fetch(`/api/metascraper/ads/${libraryId}`, {
+  const res = await authFetch(`/api/metascraper/ads/${libraryId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),

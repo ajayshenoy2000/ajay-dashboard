@@ -1,5 +1,6 @@
 import type { SourceItem } from "@/lib/types";
-import { complete, parseJsonBlock, PROMPTS } from "./providers";
+import { parseJsonBlock, PROMPTS } from "./providers";
+import { callGateway } from "@/lib/ai/gateway";
 
 export interface TrendForAnalysis {
   keyword: string;
@@ -11,22 +12,27 @@ export interface TrendForAnalysis {
 
 export async function enrichTrendsWithAnalysis(
   trends: TrendForAnalysis[],
-  provider: "claude" | "gpt",
+  userId?: string,
   limit = 5,
 ): Promise<void> {
-  if (!provider) return;
   for (const trend of trends.slice(0, limit)) {
     const snippets = trend.sources
       .slice(0, 10)
       .map((s) => `- [${s.source}] ${s.title} ${s.text}`.slice(0, 300))
       .join("\n");
 
-    const text = await complete(
-      provider,
-      "あなたは美容医療チャンネルの編集者です。日本語で簡潔に出力します。",
-      `${PROMPTS.TREND_ANALYSIS}\n\nキーワード: ${trend.keyword}\n\n収集データ:\n${snippets}`,
-      1024,
-    );
+    let text: string;
+    try {
+      const res = await callGateway("trend-analysis", {
+        system: "あなたは美容医療チャンネルの編集者です。日本語で簡潔に出力します。",
+        prompt: `${PROMPTS.TREND_ANALYSIS}\n\nキーワード: ${trend.keyword}\n\n収集データ:\n${snippets}`,
+        maxTokens: 1024,
+        userId,
+      });
+      text = res.text;
+    } catch {
+      return;
+    }
     if (!text) return;
     const data = parseJsonBlock(text);
     if (!data) continue;
@@ -38,16 +44,22 @@ export async function enrichTrendsWithAnalysis(
 
 export async function expandKeywords(
   baseKeywords: string[],
-  provider: "claude" | "gpt",
+  userId?: string,
   maxExtra = 10,
 ): Promise<string[]> {
   const seed = baseKeywords.map((k) => `- ${k}`).join("\n");
-  const text = await complete(
-    provider,
-    "あなたは日本の美容医療トレンドリサーチャーです。日本語のみで出力します。",
-    PROMPTS.KEYWORD_EXPANSION.replace("{seed}", seed),
-    512,
-  );
+  let text: string;
+  try {
+    const res = await callGateway("keyword-expansion", {
+      system: "あなたは日本の美容医療トレンドリサーチャーです。日本語のみで出力します。",
+      prompt: PROMPTS.KEYWORD_EXPANSION.replace("{seed}", seed),
+      maxTokens: 512,
+      userId,
+    });
+    text = res.text;
+  } catch {
+    return baseKeywords;
+  }
   if (!text) return baseKeywords;
   const data = parseJsonBlock(text);
   if (!data || !Array.isArray(data.keywords)) return baseKeywords;

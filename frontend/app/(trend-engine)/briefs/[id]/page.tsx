@@ -1,9 +1,14 @@
+import { redirect } from "next/navigation";
 import { BriefPanel } from "@/components/BriefPanel";
 import { Header } from "@/components/Header";
 import { getBrief } from "@/lib/trend-engine/server/service";
+import { getServerUserId } from "@/lib/supabase-server";
 
 export default async function BriefPage({ params }: { params: { id: string } }) {
-  const brief = await getBrief(params.id);
+  const userId = await getServerUserId();
+  if (!userId) redirect("/");
+
+  const brief = await getBrief(userId, params.id);
   if (!brief) {
     return (
       <div>

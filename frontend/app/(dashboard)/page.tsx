@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  Briefcase, Calendar, CalendarClock, Clock, Radar, Sparkles, Sun,
-} from "lucide-react";
+import { Link } from "next-view-transitions";
+import { Briefcase, Sun, User } from "lucide-react";
 import { fetchWeekSchedule, shiftLabel, type WeekDay } from "@/lib/schedule";
+import { BottomSheet } from "@/components/BottomSheet";
+import { AuthSheet } from "@/components/auth/AuthSheet";
+import { TaskWidget } from "@/components/tasks/TaskWidget";
+import { StatusBar } from "@/components/home/StatusBar";
+import { APPS } from "@/lib/apps";
+import { ensureSession } from "@/lib/session";
+import { onAuthStateChange } from "@/lib/auth";
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -15,42 +20,20 @@ function DayDetailSheet({ day, onClose }: { day: WeekDay; onClose: () => void })
   const dateStr = day.date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg rounded-t-3xl bg-white p-6 pb-10 shadow-[0_-8px_40px_rgba(24,33,31,0.18)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-ink/15" />
-        <div className="mb-4 flex items-center gap-3">
-          <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${isOff ? "bg-sage/15 text-sage" : "bg-coral/15 text-coral"}`}>
-            {isOff ? <Sun className="h-5 w-5" /> : <Briefcase className="h-5 w-5" />}
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-ink/40">
-              {day.isToday ? "Today" : "Schedule"}
-            </p>
-            <p className="font-bold">{dateStr}</p>
-          </div>
+    <BottomSheet open onClose={onClose} title={day.isToday ? "Today" : "Schedule"}>
+      <div className="mb-4 flex items-center gap-3">
+        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${isOff ? "bg-sage/15 text-sage" : "bg-coral/15 text-coral"}`}>
+          {isOff ? <Sun className="h-5 w-5" /> : <Briefcase className="h-5 w-5" />}
         </div>
-        <div className={`rounded-2xl px-4 py-3.5 ${isOff ? "bg-sage/10" : "bg-coral/8"}`}>
-          <p className={`text-base font-bold ${isOff ? "text-sage" : "text-coral"}`}>
-            {isOff ? "Day Off" : label}
-          </p>
-          {!isOff && day.shift && (
-            <p className="mt-0.5 text-sm text-ink/55">{day.shift}</p>
-          )}
-        </div>
-        <button
-          onClick={onClose}
-          className="mt-4 w-full rounded-2xl bg-mist py-3 text-sm font-semibold text-ink/60 transition hover:bg-ink/8"
-        >
-          Close
-        </button>
+        <p className="font-bold">{dateStr}</p>
       </div>
-    </div>
+      <div className={`rounded-2xl px-4 py-3.5 ${isOff ? "bg-sage/10" : "bg-coral/8"}`}>
+        <p className={`text-base font-bold ${isOff ? "text-sage" : "text-coral"}`}>
+          {isOff ? "Day Off" : label}
+        </p>
+        {!isOff && day.shift && <p className="mt-0.5 text-sm text-ink/55">{day.shift}</p>}
+      </div>
+    </BottomSheet>
   );
 }
 
@@ -61,8 +44,14 @@ export default function DashboardPage() {
   const [dateFull, setDateFull] = useState("");
   const [work, setWork] = useState<Awaited<ReturnType<typeof fetchWeekSchedule>> | null>(null);
   const [selectedWeekDay, setSelectedWeekDay] = useState<WeekDay | null>(null);
+  const [authSheetOpen, setAuthSheetOpen] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(true);
 
-  // Clock tick
+  useEffect(() => {
+    ensureSession().then((s) => setIsAnonymous(Boolean(s.user.is_anonymous))).catch(() => {});
+    return onAuthStateChange((session) => setIsAnonymous(session ? Boolean(session.user.is_anonymous) : true));
+  }, []);
+
   useEffect(() => {
     function tick() {
       const now = new Date();
@@ -83,44 +72,42 @@ export default function DashboardPage() {
 
   return (
     <div className="pb-10">
-      {selectedWeekDay && (
-        <DayDetailSheet day={selectedWeekDay} onClose={() => setSelectedWeekDay(null)} />
-      )}
+      {selectedWeekDay && <DayDetailSheet day={selectedWeekDay} onClose={() => setSelectedWeekDay(null)} />}
+      <AuthSheet open={authSheetOpen} onClose={() => setAuthSheetOpen(false)} />
 
       {/* Header */}
-      <header className="mb-6">
-        <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-ink/40">
-          {dateDay} · {timeStr}
-        </p>
-        <h1 className="text-3xl font-bold">
+      <header className="mb-5">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-widest text-ink/40">
+            {dateDay} · {dateFull} · {timeStr}
+          </p>
+          <button
+            onClick={() => setAuthSheetOpen(true)}
+            aria-label={isAnonymous ? "Sign in" : "Account"}
+            className={`flex h-9 w-9 items-center justify-center rounded-full transition ${isAnonymous ? "bg-coral/12 text-coral" : "bg-sage/15 text-sage"}`}
+          >
+            <User className="h-4 w-4" />
+          </button>
+        </div>
+        <h1 className="mt-1 text-3xl font-bold">
           {greeting}, <span className="text-coral">Ajay</span>
         </h1>
-        <div className="relative mt-4 overflow-hidden rounded-2xl bg-ink p-5 text-white shadow-[0_8px_32px_rgba(24,33,31,0.2)]">
-          <div
-            className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full opacity-40"
-            style={{ background: "radial-gradient(circle, #c69a48 0%, transparent 70%)", animation: "floatGlow 8s ease-in-out infinite" }}
-          />
-          <span className="relative mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gold">
-            <Sparkles className="h-3.5 w-3.5" /> Daily brief
-          </span>
-          <p className="relative text-sm leading-6 text-white/85">
-            {work ? (isOff ? "It's your day off today — enjoy the break." : `You're working today — ${work.label}.`) : "Loading your schedule…"}
-          </p>
-        </div>
       </header>
 
-      {/* Date + week strip */}
-      <section className="mb-4">
-        <h2 className="mb-3 text-4xl font-extrabold leading-none">
-          {dateDay} <span className="text-lg font-normal text-ink/40">{dateFull}</span>
-        </h2>
+      {/* AI status bar */}
+      <div className="mb-5">
+        <StatusBar />
+      </div>
+
+      {/* Week strip */}
+      <section className="mb-5">
         <div className="rounded-2xl border border-ink/10 bg-white p-4 shadow-soft">
           <div className="mb-4 flex items-center gap-3">
             <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isOff ? "bg-sage/15 text-sage" : "bg-coral/15 text-coral"}`}>
               {isOff ? <Sun className="h-5 w-5" /> : <Briefcase className="h-5 w-5" />}
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-ink/35">Work Status</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink/35">This Week</p>
               <p className="font-semibold">{work?.label ?? "Loading…"}</p>
             </div>
           </div>
@@ -142,48 +129,30 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Quick stat */}
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-ink/10 bg-white p-4 shadow-soft">
-          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-coral/12 text-coral">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <div className="text-2xl font-bold">{isOff ? "Off" : "On"}</div>
-          <div className="text-xs font-semibold text-ink/45">Work today</div>
-        </div>
-        <div className="rounded-2xl border border-ink/10 bg-white p-4 shadow-soft">
-          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-ink/6 text-ink/50">
-            <Clock className="h-4 w-4" />
-          </div>
-          <div className="tabular-nums text-2xl font-bold">{timeStr}</div>
-          <div className="text-xs font-semibold text-ink/45">Local time</div>
-        </div>
-      </div>
+      <TaskWidget />
 
-      {/* App grid */}
+      {/* App launcher — square tiles */}
       <section className="mb-4">
         <h2 className="mb-3 text-base font-bold">Your Apps</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/trends" className="group cursor-pointer rounded-2xl bg-ink p-4 text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(24,33,31,0.22)]">
-            <Sparkles className="mb-3 h-6 w-6 text-gold transition-transform duration-200 group-hover:scale-110" />
-            <div className="font-bold">Trend Intelligence</div>
-            <div className="mt-0.5 text-xs text-white/50">Analyse and summarise trends</div>
-          </Link>
-          <Link href="/schedule" className="group cursor-pointer rounded-2xl bg-ink p-4 text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(24,33,31,0.22)]">
-            <CalendarClock className="mb-3 h-6 w-6 text-gold transition-transform duration-200 group-hover:scale-110" />
-            <div className="font-bold">Work Schedule</div>
-            <div className="mt-0.5 text-xs text-white/50">Auto-synced shift calendar</div>
-          </Link>
-          <Link href="/calendar-app" className="group cursor-pointer rounded-2xl border border-ink/10 bg-white p-4 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-ink/20">
-            <Calendar className="mb-3 h-6 w-6 text-sage transition-transform duration-200 group-hover:scale-110" />
-            <div className="font-bold">Calendar</div>
-            <div className="mt-0.5 text-xs text-ink/45">Live Google Calendar feed</div>
-          </Link>
-          <Link href="/metascraper" className="group cursor-pointer rounded-2xl bg-ink p-4 text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(24,33,31,0.22)]">
-            <Radar className="mb-3 h-6 w-6 text-gold transition-transform duration-200 group-hover:scale-110" />
-            <div className="font-bold">MetaScraper</div>
-            <div className="mt-0.5 text-xs text-white/50">Competitor Meta ad recon</div>
-          </Link>
+        <div className="grid grid-cols-3 gap-3">
+          {APPS.map((a) => {
+            const Icon = a.icon;
+            return (
+              <Link
+                key={a.key}
+                href={a.href}
+                className="group flex aspect-square cursor-pointer flex-col items-center justify-center gap-2.5 rounded-3xl border border-ink/8 bg-white p-3 shadow-soft transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_12px_28px_rgba(24,33,31,0.14)]"
+              >
+                <span
+                  className="flex h-14 w-14 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-105"
+                  style={{ background: a.tint, color: a.color }}
+                >
+                  <Icon className="h-7 w-7" strokeWidth={2.1} />
+                </span>
+                <span className="text-center text-xs font-bold text-ink/75">{a.label}</span>
+              </Link>
+            );
+          })}
         </div>
       </section>
     </div>

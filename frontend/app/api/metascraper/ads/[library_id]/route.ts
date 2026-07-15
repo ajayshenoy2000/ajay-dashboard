@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { patchAd } from "@/lib/metascraper/server/service";
+import { requireUserId } from "@/lib/server/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -7,9 +8,11 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { library_id: string } },
 ) {
+  const userId = await requireUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = await req.json();
-    const updated = await patchAd(params.library_id, {
+    const updated = await patchAd(userId, params.library_id, {
       hook_category: body.hook_category,
       notes: body.notes,
     });

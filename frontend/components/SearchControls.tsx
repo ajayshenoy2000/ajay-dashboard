@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Square, RefreshCw } from "lucide-react";
 import { searchNow, setCustomKeywords } from "@/lib/api";
-import type { AppSettings, ModelProvider, SearchSource, SearchNowResponse, TimeWindow } from "@/lib/types";
+import type { AppSettings, SearchSource, SearchNowResponse, TimeWindow } from "@/lib/types";
 
 const sources: Array<{ id: SearchSource; label: string; detail: string }> = [
   { id: "x", label: "X", detail: "Recent posts" },
@@ -30,8 +30,6 @@ export function SearchControls({ settings }: { settings: AppSettings }) {
   const [enabledSources, setEnabledSources] = useState<SearchSource[]>(["google_news", "google_trends", "youtube"]);
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("24h");
   const [regionCode, setRegionCode] = useState("JP");
-  const [analysisModelProvider, setAnalysisModelProvider] = useState<ModelProvider>(settings.analysisModelProvider ?? "gpt");
-  const [briefModelProvider, setBriefModelProvider] = useState<ModelProvider>(settings.briefModelProvider ?? "claude");
   const [customKeywordsText, setCustomKeywordsText] = useState("");
   const [useCustomOnly, setUseCustomOnly] = useState(false);
   const [checkForChannelFit, setCheckForChannelFit] = useState(false);
@@ -73,8 +71,6 @@ export function SearchControls({ settings }: { settings: AppSettings }) {
       const response = await searchNow({
         sources: enabledSources,
         timeWindow,
-        analysisModelProvider,
-        briefModelProvider,
         regionCode,
         checkForChannelFit
       });
@@ -168,11 +164,6 @@ export function SearchControls({ settings }: { settings: AppSettings }) {
               ))}
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <ModelSelect label="Analysis Model" value={analysisModelProvider} onChange={setAnalysisModelProvider} />
-            <ModelSelect label="Brief Model" value={briefModelProvider} onChange={setBriefModelProvider} />
-          </div>
         </div>
       </div>
 
@@ -252,7 +243,7 @@ export function SearchControls({ settings }: { settings: AppSettings }) {
       </div>
 
       <div className="mt-4 rounded-md bg-mist p-3 text-sm leading-6 text-ink/65">
-        <strong className="text-ink">Current request:</strong> {timeWindow} · {sourceText || "No sources"} · region {regionCode} · analysis {analysisModelProvider} · briefs {briefModelProvider}
+        <strong className="text-ink">Current request:</strong> {timeWindow} · {sourceText || "No sources"} · region {regionCode}
       </div>
 
       {result ? (
@@ -262,29 +253,5 @@ export function SearchControls({ settings }: { settings: AppSettings }) {
       ) : null}
       {error ? <div className="mt-3 rounded-md border border-coral/30 bg-coral/10 p-3 text-sm font-semibold text-coral">Error: {error}</div> : null}
     </section>
-  );
-}
-
-function ModelSelect({
-  label,
-  value,
-  onChange
-}: {
-  label: string;
-  value: ModelProvider;
-  onChange: (value: ModelProvider) => void;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-bold text-ink/70">{label}</span>
-      <select
-        className="min-h-11 w-full rounded-md border border-ink/10 bg-mist px-3 text-sm font-bold outline-none focus:border-sage"
-        value={value}
-        onChange={(event) => onChange(event.target.value as ModelProvider)}
-      >
-        <option value="gpt">GPT</option>
-        <option value="claude">Claude</option>
-      </select>
-    </label>
   );
 }

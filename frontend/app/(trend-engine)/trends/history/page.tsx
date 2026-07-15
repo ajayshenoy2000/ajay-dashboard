@@ -1,11 +1,16 @@
+import { redirect } from "next/navigation";
 import { TrendsSubNav } from "@/components/TrendsSubNav";
 import { TrendFilter } from "@/components/TrendFilter";
 import { getTrendHistory } from "@/lib/trend-engine/server/service";
+import { getServerUserId } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
 
 export default async function HistoryPage() {
-  const trends = await getTrendHistory();
+  const userId = await getServerUserId();
+  if (!userId) redirect("/");
+
+  const trends = await getTrendHistory(userId);
 
   return (
     <div className="page-enter">

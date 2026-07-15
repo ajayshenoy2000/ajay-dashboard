@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { FileText, TrendingUp } from "lucide-react";
 import { CreateBriefButton } from "@/components/CreateBriefButton";
 import { Header } from "@/components/Header";
@@ -6,9 +7,13 @@ import { ScoreBreakdown } from "@/components/ScoreBreakdown";
 import { SourceList } from "@/components/SourceList";
 import { Tooltip } from "@/components/Tooltip";
 import { getTrend } from "@/lib/trend-engine/server/service";
+import { getServerUserId } from "@/lib/supabase-server";
 
 export default async function TrendDetailPage({ params }: { params: { id: string } }) {
-  const trend = await getTrend(params.id);
+  const userId = await getServerUserId();
+  if (!userId) redirect("/");
+
+  const trend = await getTrend(userId, params.id);
 
   if (!trend) {
     return (

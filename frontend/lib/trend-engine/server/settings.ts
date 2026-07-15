@@ -26,13 +26,17 @@ export type TrendSettings = {
   lastSearchMeta: Record<string, unknown>;
 };
 
-export async function loadSettings(): Promise<TrendSettings> {
+// trend_settings is a one-row-per-user table (single-user app, no org layer —
+// see Phase 2 of the overhaul plan). `id` stays the table's primary key for
+// legacy-schema reasons, but `user_id` (unique) is the real key every read/
+// write goes through here.
+export async function loadSettings(userId: string): Promise<TrendSettings> {
   const db = getDb();
   if (!db) return defaultSettings();
 
-  const { data } = await db.from("trend_settings").select("*").eq("id", "singleton").limit(1);
+  const { data } = await db.from("trend_settings").select("*").eq("user_id", userId).limit(1);
   if (!data?.length) {
-    await db.from("trend_settings").upsert({ id: "singleton" });
+    await db.from("trend_settings").upsert({ id: userId, user_id: userId }, { onConflict: "user_id" });
     return defaultSettings();
   }
 
@@ -49,11 +53,11 @@ export async function loadSettings(): Promise<TrendSettings> {
   };
 }
 
-export async function saveSettings(patch: Partial<TrendSettings>): Promise<void> {
+export async function saveSettings(userId: string, patch: Partial<TrendSettings>): Promise<void> {
   const db = getDb();
   if (!db) return;
 
-  const row: Record<string, unknown> = { id: "singleton", updated_at: new Date().toISOString() };
+  const row: Record<string, unknown> = { id: userId, user_id: userId, updated_at: new Date().toISOString() };
   if ("keywords" in patch) row.keywords = patch.keywords;
   if ("customKeywords" in patch) row.custom_keywords = patch.customKeywords ?? [];
   if ("useCustomOnly" in patch) row.use_custom_only = patch.useCustomOnly;
@@ -63,9 +67,8 @@ export async function saveSettings(patch: Partial<TrendSettings>): Promise<void>
   if ("lastSources" in patch) row.last_sources = patch.lastSources;
   if ("lastSearchMeta" in patch) row.last_search_meta = patch.lastSearchMeta;
 
-  const { error } = await db.from("trend_settings").upsert(row);
+  const { error } = await db.from("trend_settings").upsert(row, { onConflict: "user_id" });
   if (error) throw new Error(`trend_settings upsert failed: ${error.message} (code=${error.code})`);
-
 }
 
 function defaultSettings(): TrendSettings {
@@ -86,7 +89,5 @@ function defaultSearchMeta(): Record<string, unknown> {
     mode: "sample",
     timeWindow: "sample",
     sources: ["x", "google_news", "google_trends", "youtube"],
-    analysisModelProvider: "gpt",
-    briefModelProvider: "claude",
   };
 }

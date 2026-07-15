@@ -106,7 +106,7 @@ export function TrendCard({ trend, rank }: { trend: Trend; rank?: number }) {
           <Link
             href={`/briefs/${briefId}`}
             onClick={(event) => event.stopPropagation()}
-            className="flex min-h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white"
+            className="flex min-h-11 items-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white"
           >
             <FileText className="h-3.5 w-3.5" />
             View Brief
@@ -116,7 +116,7 @@ export function TrendCard({ trend, rank }: { trend: Trend; rank?: number }) {
             type="button"
             onClick={handleCreateBrief}
             disabled={isGenerating}
-            className="flex min-h-9 items-center gap-2 rounded-md bg-coral px-3 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-ink/25"
+            className="flex min-h-11 items-center gap-2 rounded-md bg-coral px-3 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-ink/25"
           >
             {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
             {isGenerating ? "Generating..." : "Create Brief"}
@@ -125,7 +125,7 @@ export function TrendCard({ trend, rank }: { trend: Trend; rank?: number }) {
         <button
           type="button"
           onClick={handleDelete}
-          className="flex min-h-9 items-center gap-2 rounded-md border border-coral/30 px-3 text-xs font-bold text-coral hover:bg-coral/10"
+          className="flex min-h-11 items-center gap-2 rounded-md border border-coral/30 px-3 text-xs font-bold text-coral hover:bg-coral/10"
         >
           <Trash2 className="h-3.5 w-3.5" />
           Delete

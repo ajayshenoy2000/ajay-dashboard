@@ -6,6 +6,11 @@
   color-scheme: light;
   background: #f5f7f5;
   --font-hiragino: 'Hiragino Sans', 'Hiragino Sans W4', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* Requires viewportFit: "cover" in app/layout.tsx's viewport export to be non-zero on iOS. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 }
 
 * { box-sizing: border-box; }
@@ -116,6 +121,27 @@ button:active, a:active {
   50%       { opacity: 0.5; transform: scale(0.8); }
 }
 
+/* ── Centered modal entrance (components/BottomSheet.tsx) ── */
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── View Transitions (native-feeling route changes, see next-view-transitions
+   in app/layout.tsx and components/BottomNav.tsx) ── */
+::view-transition-old(root) {
+  animation: viewFadeOut 0.18s ease-out both;
+}
+::view-transition-new(root) {
+  animation: viewFadeIn 0.22s ease-out both;
+}
+@keyframes viewFadeOut {
+  to { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes viewFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
 /* ── Reduced-motion override ── */
 @media (prefers-reduced-motion: reduce) {
   .page-enter, .tab-enter, .stagger-list > * {
@@ -123,5 +149,8 @@ button:active, a:active {
   }
   a, button, input, select, textarea {
     transition: background-color 0.1s ease, color 0.1s ease;
+  }
+  ::view-transition-old(root), ::view-transition-new(root) {
+    animation: none;
   }
 }

@@ -47,7 +47,7 @@ export function BriefCard({ brief }: { brief: Brief }) {
         <button
           type="button"
           onClick={handleDelete}
-          className="flex min-h-9 items-center gap-2 rounded-md border border-coral/30 px-3 text-xs font-bold text-coral hover:bg-coral/10"
+          className="flex min-h-11 items-center gap-2 rounded-md border border-coral/30 px-3 text-xs font-bold text-coral hover:bg-coral/10"
         >
           <Trash2 className="h-3.5 w-3.5" />
           Delete

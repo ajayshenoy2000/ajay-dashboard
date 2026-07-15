@@ -18,6 +18,14 @@ export async function POST(req: NextRequest) {
   if (!checkToken(req)) {
     return NextResponse.json({ error: "Invalid or missing ingest token" }, { status: 401 });
   }
+  // This route is hit externally (pasted into Claude-in-Chrome) with only the
+  // ingest token above — there's no browser session to resolve a userId from,
+  // so it's stamped with the single owning account instead. Set once, after
+  // completing real signup, per Phase 2 of the overhaul plan.
+  const userId = process.env.OWNER_USER_ID;
+  if (!userId) {
+    return NextResponse.json({ error: "OWNER_USER_ID is not configured" }, { status: 500 });
+  }
   try {
     const body = await req.json();
     if (!body?.captured_date) {
@@ -29,7 +37,7 @@ export async function POST(req: NextRequest) {
       ads: Array.isArray(body.ads) ? body.ads : [],
       hunted_scope: Array.isArray(body.hunted_scope) ? body.hunted_scope : [],
     };
-    return NextResponse.json(await ingestCapture(capture));
+    return NextResponse.json(await ingestCapture(userId, capture));
   } catch (e) {
     return NextResponse.json({ error: `Ingest failed: ${e}` }, { status: 500 });
   }
