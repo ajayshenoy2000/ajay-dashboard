@@ -25,7 +25,7 @@ function isSameDay(a: Date, b: Date) {
 }
 
 // AI-styled "today at a glance" digest that pulls together the whole dashboard:
-// work schedule, tasks due/overdue, the next reminder, and PowerChat activity.
+// work schedule, tasks due/overdue, the next reminder, and Mio activity.
 // The lead line is composed from the aggregated signals so it always reflects
 // live state without a per-load model call.
 export function StatusBar() {

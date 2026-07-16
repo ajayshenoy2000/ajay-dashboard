@@ -1,23 +1,18 @@
-import { generateText, streamText, stepCountIs, type ToolSet } from "ai";
+import { generateText, streamText, stepCountIs, type ModelMessage, type ToolSet } from "ai";
 import { getOpenRouter, openRouterAvailable } from "./provider";
-import { USE_CASES, OVERRIDABLE_MODELS, type UseCaseKey } from "./useCases";
+import { USE_CASES, type UseCaseKey } from "./useCases";
 import { logUsage } from "./usage";
 import { GatewayError } from "./errors";
-
-export interface GatewayMessage {
-  role: "user" | "assistant" | "system";
-  content: string;
-}
 
 export interface GatewayRequest {
   system?: string;
   prompt?: string;
-  messages?: GatewayMessage[];
+  messages?: ModelMessage[];
   maxTokens?: number;
   temperature?: number;
   tools?: ToolSet;
-  modelOverride?: string;
   userId?: string;
+  sessionId?: string;
   // streamGateway only: called once the stream finishes, with the full text —
   // used by the chatbot (Phase 7) to persist the assistant's reply after
   // streaming it to the client, without the caller needing its own onFinish.
@@ -32,16 +27,15 @@ export interface GatewayResponse {
   toolCalls?: unknown;
 }
 
-function resolveModel(useCase: UseCaseKey, modelOverride?: string) {
+function resolveModel(useCase: UseCaseKey) {
   const uc = USE_CASES[useCase];
-  if (!modelOverride) return { modelSlug: uc.primary as string, models: uc.models.slice() as string[] };
-  if (!("allowOverride" in uc) || !uc.allowOverride) {
-    throw new GatewayError(`Use case "${useCase}" does not allow a model override`);
-  }
-  if (!OVERRIDABLE_MODELS.includes(modelOverride)) {
-    throw new GatewayError(`Model "${modelOverride}" is not in the allowed override list`);
-  }
-  return { modelSlug: modelOverride, models: [modelOverride] };
+  return { modelSlug: uc.primary as string, models: uc.models.slice() as string[] };
+}
+
+function reasoningFor(useCase: UseCaseKey) {
+  if (useCase === "mio-maintenance") return { effort: "none" as const, exclude: true };
+  if (useCase === "chatbot") return { effort: "minimal" as const, exclude: true };
+  return { effort: "low" as const, exclude: true };
 }
 
 // Single-call, non-streaming gateway entry point. OpenRouter performs cross-model
@@ -51,10 +45,17 @@ export async function callGateway(useCase: UseCaseKey, req: GatewayRequest): Pro
     throw new GatewayError("OPENROUTER_API_KEY is not configured");
   }
   const uc = USE_CASES[useCase];
-  const { modelSlug, models } = resolveModel(useCase, req.modelOverride);
+  const { modelSlug, models } = resolveModel(useCase);
 
   const openrouter = getOpenRouter();
-  const model = openrouter.chat(modelSlug, { models, usage: { include: true } });
+  const model = openrouter.chat(modelSlug, {
+    models,
+    reasoning: reasoningFor(useCase),
+    usage: { include: true },
+    user: req.userId,
+    provider: { allow_fallbacks: true, require_parameters: true, data_collection: "deny", sort: "latency" },
+    ...(req.sessionId ? { extraBody: { session_id: req.sessionId } } : {}),
+  });
 
   const start = Date.now();
   try {
@@ -113,10 +114,19 @@ export function streamGateway(useCase: UseCaseKey, req: GatewayRequest) {
     throw new GatewayError("OPENROUTER_API_KEY is not configured");
   }
   const uc = USE_CASES[useCase];
-  const { modelSlug, models } = resolveModel(useCase, req.modelOverride);
+  const { modelSlug, models } = resolveModel(useCase);
 
   const openrouter = getOpenRouter();
-  const model = openrouter.chat(modelSlug, { models, usage: { include: true } });
+  const model = openrouter.chat(modelSlug, {
+    models,
+    reasoning: reasoningFor(useCase),
+    usage: { include: true },
+    user: req.userId,
+    provider: { allow_fallbacks: true, require_parameters: true, data_collection: "deny", sort: "latency" },
+    ...(req.sessionId ? { extraBody: { session_id: req.sessionId } } : {}),
+  });
+
+  const start = Date.now();
 
   return streamText({
     model,
@@ -136,7 +146,7 @@ export function streamGateway(useCase: UseCaseKey, req: GatewayRequest) {
         model: modelSlug,
         provider: "openrouter",
         success: true,
-        latencyMs: 0,
+        latencyMs: Date.now() - start,
         promptTokens: result.usage?.inputTokens ?? null,
         completionTokens: result.usage?.outputTokens ?? null,
         costUsd: openrouterMeta?.usage?.cost ?? null,

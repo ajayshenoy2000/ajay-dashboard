@@ -6,6 +6,7 @@ import { getSummary, getAdsView, getConfig, patchAd, putConfig } from "@/lib/met
 import { fetchWeekSchedule } from "@/lib/schedule";
 import { completeTask, createTask, listTasks } from "@/lib/tasks/server/service";
 import { getDataAccess } from "./dataAccess";
+import { saveMemory, searchLibrary, searchMemories } from "./knowledge";
 
 // Read-only tools only — no tool here ever mutates data. Each is gated behind
 // the caller's chatbot_data_access row (see Phase 7 of the overhaul plan);
@@ -17,28 +18,51 @@ import { getDataAccess } from "./dataAccess";
 // apps' service-role service layers, so they require SUPABASE_SERVICE_KEY at
 // runtime (present in deployed envs); when it's absent they degrade to empty
 // results rather than erroring.
-export async function buildToolsForUser(db: SupabaseClient, userId: string): Promise<ToolSet> {
+export async function buildToolsForUser(db: SupabaseClient, userId: string, query = ""): Promise<ToolSet> {
   const access = await getDataAccess(db, userId);
-  const tools: ToolSet = {};
+  const tools: ToolSet = {
+    rememberForLater: tool({
+      description: "Save a durable personal fact, preference, goal, project, relationship, or decision. Use only when the user explicitly asks Mio to remember it or clearly states a lasting preference.",
+      inputSchema: z.object({
+        kind: z.enum(["preference", "profile", "goal", "project", "relationship", "decision", "other"]),
+        title: z.string().min(2).max(160),
+        content: z.string().min(2).max(4000),
+      }),
+      execute: async ({ kind, title, content }) => saveMemory(db, userId, { kind, title, content, sourceType: "explicit" }),
+    }),
+    searchPersonalKnowledge: tool({
+      description: "Search Mio's user-managed memories and imported/pasted libraries when the supplied context is insufficient.",
+      inputSchema: z.object({ query: z.string().min(2).max(500) }),
+      execute: async ({ query: searchQuery }) => {
+        const [memories, library] = await Promise.all([searchMemories(db, searchQuery, 8), searchLibrary(db, searchQuery, 8)]);
+        return { memories, library };
+      },
+    }),
+  };
+  const normalized = query.toLowerCase();
+  const wantsTrends = /\b(trend|topic|brief|content|video|keyword|youtube|news)\b/.test(normalized);
+  const wantsMeta = /\b(meta|ad|ads|advert|competitor|creative|hook|campaign)\b/.test(normalized);
+  const wantsSchedule = /\b(schedule|calendar|work|shift|day off|roster)\b/.test(normalized);
+  const wantsTasks = /\b(task|tasks|todo|to-do|due|remind|focus|plan|what should i do)\b/.test(normalized);
 
-  if (access.trendEngine) {
+  if (access.trendEngine && wantsTrends) {
     tools.getTrends = tool({
       description: "Get today's top trending topics from the Trend Engine, with scores and summaries.",
       inputSchema: z.object({}),
       execute: async () => {
-        const trends = await getTopTrends(userId, 20);
+        const trends = await getTopTrends(userId, 12);
         return trends.map((t) => ({
           rowId: t.rowId, keyword: t.keyword, title: t.title, summary: t.summary,
-          score: t.score?.total ?? null, hasBrief: t.hasBrief,
+          score: t.score?.total ?? null, hasBrief: t.hasBrief, href: `/trends/${t.rowId}`,
         }));
       },
     });
     tools.getTrendHistory = tool({
       description: "Get historical trends from past searches (not just today's).",
-      inputSchema: z.object({ limit: z.number().int().min(1).max(100).default(50) }),
+      inputSchema: z.object({ limit: z.number().int().min(1).max(30).default(12) }),
       execute: async ({ limit }) => {
         const trends = await getTrendHistory(userId, limit);
-        return trends.map((t) => ({ keyword: t.keyword, title: t.title, summary: t.summary, createdAt: t.createdAt }));
+        return { href: "/trends/history", trends: trends.map((t) => ({ keyword: t.keyword, title: t.title, summary: t.summary, createdAt: t.createdAt })) };
       },
     });
     tools.getBriefs = tool({
@@ -46,7 +70,7 @@ export async function buildToolsForUser(db: SupabaseClient, userId: string): Pro
       inputSchema: z.object({}),
       execute: async () => {
         const briefs = await getBriefs(userId);
-        return briefs.map((b) => ({ title: b.titleOptions[0], hook: b.hook, cta: b.cta }));
+        return { href: "/briefs", briefs: briefs.map((b) => ({ title: b.titleOptions[0], hook: b.hook, cta: b.cta })) };
       },
     });
     tools.searchTrends = tool({
@@ -57,7 +81,7 @@ export async function buildToolsForUser(db: SupabaseClient, userId: string): Pro
       }),
       execute: async ({ timeWindow, regionCode }) => {
         const result = await runSearch({ userId, sources: ["google_news", "google_trends", "youtube"], timeWindow, regionCode, checkForChannelFit: true });
-        return { saved: result.trends.length, top: result.trends.slice(0, 5).map((trend) => ({ rowId: trend.rowId, title: trend.title, score: trend.score.total })) };
+        return { saved: result.trends.length, href: "/trends", top: result.trends.slice(0, 5).map((trend) => ({ rowId: trend.rowId, title: trend.title, score: trend.score.total, href: `/trends/${trend.rowId}` })) };
       },
     });
     tools.generateTrendBrief = tool({
@@ -72,18 +96,18 @@ export async function buildToolsForUser(db: SupabaseClient, userId: string): Pro
     });
   }
 
-  if (access.metascraper) {
+  if (access.metascraper && wantsMeta) {
     tools.getMetaScraperSummary = tool({
       description: "Get a summary of tracked competitor Meta ads: totals, per-niche breakdown, proven/killed counts.",
       inputSchema: z.object({}),
-      execute: async () => getSummary(userId),
+      execute: async () => ({ ...(await getSummary(userId)), href: "/metascraper/dashboard" }),
     });
     tools.getMetaScraperAds = tool({
       description: "Get the list of tracked competitor Meta ads with status (new/running/killed) and longevity.",
       inputSchema: z.object({}),
       execute: async () => {
         const ads = await getAdsView(userId);
-        return ads.slice(0, 50);
+        return { href: "/metascraper/dashboard", ads: ads.slice(0, 20) };
       },
     });
     tools.getMetaScraperBanks = tool({
@@ -119,13 +143,14 @@ export async function buildToolsForUser(db: SupabaseClient, userId: string): Pro
     });
   }
 
-  if (access.schedule) {
+  if (access.schedule && wantsSchedule) {
     tools.getWorkSchedule = tool({
       description: "Get this week's work schedule (which days are work vs. day off).",
       inputSchema: z.object({}),
       execute: async () => {
         const week = await fetchWeekSchedule();
         return {
+          href: "/schedule",
           today: { status: week.status, label: week.label },
           week: week.week.map((d) => ({ date: d.date.toISOString().slice(0, 10), status: d.status, shift: d.shift })),
         };
@@ -133,7 +158,7 @@ export async function buildToolsForUser(db: SupabaseClient, userId: string): Pro
     });
   }
 
-  if (access.tasks) {
+  if (access.tasks && wantsTasks) {
     tools.getTasks = tool({
       description: "Get the user's open tasks, including subtasks, due dates, and which group/project they belong to.",
       inputSchema: z.object({}),
@@ -141,7 +166,7 @@ export async function buildToolsForUser(db: SupabaseClient, userId: string): Pro
         const tasks = await listTasks(userId, { includeDone: false });
         const flatten = (list: typeof tasks): unknown[] =>
           list.flatMap((t) => [
-            { id: t.id, title: t.title, dueAt: t.dueAt, groupId: t.groupId, recurring: Boolean(t.recurrenceRule) },
+            { id: t.id, title: t.title, dueAt: t.dueAt, groupId: t.groupId, recurring: Boolean(t.recurrenceRule), href: t.groupId ? `/tasks/${t.groupId}` : "/tasks" },
             ...flatten(t.subtasks),
           ]);
         return flatten(tasks);

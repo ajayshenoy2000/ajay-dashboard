@@ -4,13 +4,11 @@ import { useState } from "react";
 import { Link } from "next-view-transitions";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3, Check, ChevronUp, Compass, FileText, FolderKanban, History,
+  BarChart3, Compass, FileText, FolderKanban, History,
   House, Images, LayoutGrid, ListChecks, ShieldCheck, SlidersHorizontal,
-  SquarePen, type LucideIcon,
+  Sparkles, SquarePen, type LucideIcon,
 } from "lucide-react";
 import { APPS, appForPath } from "@/lib/apps";
-import { CHAT_MODELS, chatModel } from "@/lib/ai/models";
-import { ModelBadge } from "@/components/chatbot/ModelBadge";
 import { useNavControls } from "@/components/nav/NavControlsProvider";
 import { haptic } from "@/lib/haptics";
 import { DataAccessMenu } from "@/components/chatbot/DataAccessPanel";
@@ -23,7 +21,7 @@ interface SubTab {
 }
 
 // Route-derived section tabs shown as a segmented control inside each app.
-// (PowerChat is intentionally absent — it injects dynamic controls via context.)
+// (Mio is intentionally absent — it injects dynamic controls via context.)
 const APP_TABS: Record<string, SubTab[]> = {
   trends: [
     { href: "/trends", label: "Discover", icon: Compass, isActive: (p) => p === "/trends" },
@@ -150,10 +148,9 @@ function SingleViewBar({ label, accent, icon: Icon }: { label: string; accent: s
   );
 }
 
-// ── PowerChat: model switcher + new chat + history (from context) ───────────
+// ── Mio: assistant identity + new chat + history (from context) ─────────────
 function ChatBar() {
   const controls = useNavControls();
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
 
   // Controls not yet registered (first paint before ChatThread mounts): show
@@ -167,24 +164,19 @@ function ChatBar() {
     );
   }
 
-  const current = chatModel(controls.model);
-
   return (
     <div className="relative flex items-center gap-2 p-2">
       <HomeAnchor />
 
-      {/* Model switcher pill */}
-      <button
-        onClick={() => { haptic(8); setPickerOpen((v) => !v); }}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl bg-mist/70 px-3 py-2.5 active:scale-[0.98]"
-      >
-        <ModelBadge slug={current.slug} size={22} />
-        <span className="min-w-0 flex-1 text-left">
-          <span className="block truncate text-sm font-bold leading-tight text-ink/80">{current.short}</span>
-          <span className="block truncate text-[10px] font-semibold leading-tight text-ink/40">{current.maker}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl bg-mist/70 px-3 py-2.5">
+        <span className="flex h-[22px] w-[22px] items-center justify-center rounded-lg bg-coral text-white">
+          <Sparkles className="h-3.5 w-3.5" />
         </span>
-        <ChevronUp className={`h-4 w-4 shrink-0 text-ink/40 transition-transform ${pickerOpen ? "" : "rotate-180"}`} />
-      </button>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-bold leading-tight text-ink/80">Mio</span>
+          <span className="block truncate text-[10px] font-semibold leading-tight text-ink/40">Personal assistant</span>
+        </span>
+      </div>
 
       {/* New chat */}
       <button
@@ -205,7 +197,7 @@ function ChatBar() {
       </button>
 
       <button
-        onClick={() => { haptic(8); setAccessOpen((value) => !value); setPickerOpen(false); }}
+        onClick={() => { haptic(8); setAccessOpen((value) => !value); }}
         aria-label="Assistant data access"
         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-ink/10 bg-white text-sage active:scale-95"
       >
@@ -213,33 +205,6 @@ function ChatBar() {
       </button>
 
       <DataAccessMenu open={accessOpen} onClose={() => setAccessOpen(false)} />
-
-      {/* Model picker popover (opens upward) */}
-      {pickerOpen && (
-        <>
-          <div className="fixed inset-0 z-[-1]" onClick={() => setPickerOpen(false)} />
-          <div className="absolute bottom-[calc(100%+8px)] left-2 right-2 rounded-2xl border border-ink/10 bg-white p-1.5 shadow-[0_-8px_30px_rgba(24,33,31,0.18)]">
-            <p className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-ink/35">Model</p>
-            {CHAT_MODELS.map((m) => {
-              const active = m.slug === controls.model;
-              return (
-                <button
-                  key={m.slug}
-                  onClick={() => { haptic(8); controls.onModelChange(m.slug); setPickerOpen(false); }}
-                  className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition ${active ? "bg-mist" : "hover:bg-mist/60"}`}
-                >
-                  <ModelBadge slug={m.slug} size={26} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold text-ink/85">{m.label}</span>
-                    <span className="block truncate text-[11px] font-semibold text-ink/40">{m.maker}</span>
-                  </span>
-                  {active && <Check className="h-4 w-4 shrink-0" style={{ color: m.color }} />}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
     </div>
   );
 }

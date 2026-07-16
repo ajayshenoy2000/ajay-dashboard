@@ -2,8 +2,8 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 
-// Controls the chat screen injects into the bottom nav so PowerChat's controls
-// (model switcher, new chat, history) live in the primary nav bar rather than
+// Controls the chat screen injects into the bottom nav so Mio's controls
+// (new chat and history) live in the primary nav bar rather than
 // duplicated inside the page.
 //
 // Implemented as a tiny external store (not React context state) so that
@@ -12,8 +12,6 @@ import { useEffect, useSyncExternalStore } from "react";
 // child→parent "setState while rendering" coupling that a context-state
 // provider would create.
 export interface ChatNavControls {
-  model: string;
-  onModelChange: (slug: string) => void;
   onNewChat: () => void;
   onOpenHistory: () => void;
 }
@@ -43,10 +41,10 @@ export function useNavControls(): ChatNavControls | null {
 // Called by the chat screen to publish its controls while mounted; clears them
 // on unmount so the nav reverts to plain navigation.
 export function useRegisterChatControls(controls: ChatNavControls) {
-  const { model, onModelChange, onNewChat, onOpenHistory } = controls;
+  const { onNewChat, onOpenHistory } = controls;
   useEffect(() => {
-    current = { model, onModelChange, onNewChat, onOpenHistory };
+    current = { onNewChat, onOpenHistory };
     emit();
     return () => { current = null; emit(); };
-  }, [model, onModelChange, onNewChat, onOpenHistory]);
+  }, [onNewChat, onOpenHistory]);
 }

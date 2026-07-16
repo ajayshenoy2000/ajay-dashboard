@@ -79,7 +79,7 @@ export default function GlobalSettingsPage() {
 
         <SettingsGroup icon={Link2} title="Connected apps" summary="Shared data is scoped to your account">
           <div className="grid grid-cols-2 gap-2 text-xs font-bold text-ink/55">
-            {["Trend Engine", "MetaScraper", "Tasks", "PowerChat"].map((label) => <div key={label} className="flex items-center gap-2 rounded-xl bg-mist px-3 py-2.5"><CheckCircle2 className="h-3.5 w-3.5 text-sage" /> {label}</div>)}
+            {["Trend Engine", "MetaScraper", "Tasks", "Mio"].map((label) => <div key={label} className="flex items-center gap-2 rounded-xl bg-mist px-3 py-2.5"><CheckCircle2 className="h-3.5 w-3.5 text-sage" /> {label}</div>)}
           </div>
         </SettingsGroup>
       </div>

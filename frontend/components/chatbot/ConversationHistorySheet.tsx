@@ -36,27 +36,27 @@ export function ConversationHistorySheet({
       {conversations.length ? (
         <div className="space-y-1">
           {conversations.map((c) => (
-            <button
+            <div
               key={c.id}
-              onClick={() => {
-                onSelect(c.id);
-                onClose();
-              }}
-              className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left transition ${
+              className={`flex w-full items-center gap-1 rounded-xl px-1 py-1 transition ${
                 c.id === activeId ? "bg-mist" : "hover:bg-mist"
               }`}
             >
-              <div className="min-w-0">
+              <button
+                onClick={() => { onSelect(c.id); onClose(); }}
+                className="min-w-0 flex-1 rounded-lg px-2 py-1.5 text-left"
+              >
                 <p className="truncate text-sm font-semibold text-ink/80">{c.title || "New conversation"}</p>
                 <p className="text-[11px] text-ink/40">{new Date(c.updatedAt).toLocaleString()}</p>
-              </div>
-              <span
+              </button>
+              <button
                 onClick={(e) => handleDelete(c.id, e)}
+                aria-label={`Delete ${c.title || "conversation"}`}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink/25 transition hover:bg-coral/10 hover:text-coral"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-              </span>
-            </button>
+              </button>
+            </div>
           ))}
         </div>
       ) : (

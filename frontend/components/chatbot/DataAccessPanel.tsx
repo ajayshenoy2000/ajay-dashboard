@@ -40,7 +40,7 @@ export function DataAccessMenu({ open, onClose }: { open: boolean; onClose: () =
     <div className="absolute bottom-[calc(100%+8px)] left-2 right-2 rounded-3xl border border-ink/10 bg-white p-3 shadow-[0_-12px_40px_rgba(24,33,31,0.18)]">
       <div className="mb-3 flex items-center gap-2 px-1">
         <ShieldCheck className="h-4 w-4 text-sage" />
-        <div className="min-w-0 flex-1"><p className="text-xs font-bold">Assistant access</p><p className="text-[10px] text-ink/40">Let PowerChat act across your workspace</p></div>
+        <div className="min-w-0 flex-1"><p className="text-xs font-bold">Assistant access</p><p className="text-[10px] text-ink/40">Let Mio act across your workspace</p></div>
         <button onClick={onClose} aria-label="Close data access"><X className="h-4 w-4 text-ink/35" /></button>
       </div>
       <div className="grid grid-cols-2 gap-2">

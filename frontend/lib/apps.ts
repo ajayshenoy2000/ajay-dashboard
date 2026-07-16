@@ -23,8 +23,8 @@ export interface AppDef {
 export const APPS: AppDef[] = [
   {
     key: "powerchat",
-    label: "PowerChat",
-    tagline: "AI across all your data",
+    label: "Mio",
+    tagline: "Your personal assistant",
     href: "/chat",
     icon: Sparkles,
     color: "#d96f58",

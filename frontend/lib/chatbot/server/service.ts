@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ChatMessage, ChatRole, Conversation } from "../types";
+import type { ChatAttachment, ChatMessage, ChatRole, Conversation } from "../types";
 
 // NOTE (Phase 7 revision): the chatbot persists via an RLS-scoped client
 // authenticated as the calling user (see lib/server/auth.ts getAuthContext),
@@ -13,6 +13,9 @@ function conversationFromRow(row: Record<string, unknown>): Conversation {
     id: row.id as string,
     title: (row.title as string) ?? null,
     model: row.model as string,
+    summary: (row.summary as string) ?? null,
+    summaryThroughMessageId: (row.summary_through_message_id as string) ?? null,
+    memoryProcessedThroughMessageId: (row.memory_processed_through_message_id as string) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -23,6 +26,7 @@ function messageFromRow(row: Record<string, unknown>): ChatMessage {
     id: row.id as string,
     role: row.role as ChatRole,
     content: row.content as string,
+    attachments: (row.attachments as ChatAttachment[] | null) ?? [],
     createdAt: row.created_at as string,
   };
 }
@@ -53,6 +57,10 @@ export async function getConversation(db: SupabaseClient, userId: string, id: st
 }
 
 export async function deleteConversation(db: SupabaseClient, userId: string, id: string): Promise<void> {
+  const { data: rows } = await db.from("messages").select("attachments").eq("user_id", userId).eq("conversation_id", id);
+  const paths = (rows ?? []).flatMap((row) => ((row.attachments as ChatAttachment[] | null) ?? []).map((attachment) => attachment.storagePath))
+    .filter((path) => path.startsWith(`${userId}/`));
+  if (paths.length) await db.storage.from("chat-attachments").remove(paths);
   await db.from("conversations").delete().eq("user_id", userId).eq("id", id);
 }
 
@@ -72,8 +80,15 @@ export async function addMessage(
   conversationId: string,
   role: ChatRole,
   content: string,
+  attachments: ChatAttachment[] = [],
 ): Promise<void> {
-  const { error } = await db.from("messages").insert({ user_id: userId, conversation_id: conversationId, role, content });
+  const { error } = await db.from("messages").insert({
+    user_id: userId,
+    conversation_id: conversationId,
+    role,
+    content,
+    attachments,
+  });
   if (error) throw new Error(`messages insert failed: ${error.message}`);
   await db.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
 }
